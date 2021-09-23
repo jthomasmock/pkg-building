@@ -3,25 +3,28 @@
   <head>
     <title>Package Building</title>
     <meta charset="utf-8" />
-    <meta name="author" content="Tom Mock and Josiah Parry" />
+    <meta name="author" content="Tom Mock &amp; Josiah Parry" />
+    <meta name="date" content="2021-09-23" />
     <script src="libs/header-attrs/header-attrs.js"></script>
     <link href="libs/remark-css/default.css" rel="stylesheet" />
-    <link href="libs/remark-css/default-fonts.css" rel="stylesheet" />
+    <link rel="stylesheet" href="css/my-theme.css" type="text/css" />
+    <link rel="stylesheet" href="css/my-fonts.css" type="text/css" />
   </head>
   <body>
     <textarea id="source">
-class: center, middle, inverse, title-slide
+
+
+
+
+class: title-slide, left, middle
 
 # Package Building
-## with <code>devtools</code> and <code>usethis</code>
-### Tom Mock and Josiah Parry
-### RStudio, PBC
-### updated: 2021-09-23
 
----
+## with `devtools` and `usethis`
 
+### Tom Mock &amp; Josiah Parry
 
-
+### 2021-09-23
 
 ---
 
@@ -239,16 +242,16 @@ generate_df(125)
 ## # A tibble: 125 × 2
 ##    id    values
 ##    &lt;chr&gt;  &lt;dbl&gt;
-##  1 H036    14.8
-##  2 R005    13.6
-##  3 P047    14.6
-##  4 S060    15.8
-##  5 Q027    12.5
-##  6 M003    16.9
-##  7 T023    13.7
-##  8 B069    16.0
-##  9 Z021    12.0
-## 10 B062    15.5
+##  1 R006    18.8
+##  2 S075    14.3
+##  3 M043    13.6
+##  4 K035    15.6
+##  5 I070    16.9
+##  6 R023    15.7
+##  7 M047    13.2
+##  8 V089    15.2
+##  9 T119    16.2
+## 10 A096    13.4
 ## # … with 115 more rows
 ```
 
@@ -1224,7 +1227,7 @@ head(mtcars, 10) %&gt;%
 
 ---
 
-### General Functions 
+#### General Functions 
 
 * [R for Data Science, Programming](https://r4ds.had.co.nz/program-intro.html)  
 * [Software Carpentry - Creating functions](https://swcarpentry.github.io/r-novice-inflammation/02-func-R/)  
@@ -1233,13 +1236,13 @@ head(mtcars, 10) %&gt;%
 
 --
 
-### Good practices on naming and style
+#### Good practices on naming and style
 
 * [`tidyverse` style guide on functions](https://style.tidyverse.org/functions.html)  
 
 --
 
-### Specific to `tidyeval` but useful overall
+#### Specific to `tidyeval` but useful overall
 
 * [`tidyeval` book](https://tidyeval.tidyverse.org/index.html)  
 * [`rlang` 0.4 blogpost](https://www.tidyverse.org/blog/2019/06/rlang-0-4-0/#a-simpler-interpolation-pattern-with)  
@@ -1890,7 +1893,7 @@ gt_add_divider &lt;- function(gt_object, columns, ...,
 
 ### A `gt` function, documented
 
-We also need to add `gt` as an import in the `DESCRIPTION` (and git commit)
+We also need to add `gt` as an import in the `DESCRIPTION` (and git commit), this can be accomplished manually or via `usethis::use_package("gt")`. Note that you can add a specific _version_ of that required package by adding logic after the package name.
 
 ```
 Package: demopkg
@@ -1918,7 +1921,8 @@ We've gone through:
 
 * The end-to-end process of writing and creating functions with base R and with `tidyeval`  
 * How to create a minimal package  
-* How to document the package within R  
+* How to add functions to your package  
+* How to document the package and it's dependencies within R  
 * How to test the functions within your package  
 * How to create public documentation, external to R  
 
@@ -1928,21 +1932,23 @@ I hope you feel empowered that _you_ can create your own package, and with many 
 
 ---
 
-.pull-left[
 ### For followup
 
-]
-
-.pull-right[
-
-&lt;img src="https://d33wubrfki0l68.cloudfront.net/19c4a5cab01d9bcb1d2edeb63ce5ba0f21870e33/68feb/images/cover.png" width="50%" /&gt;
-
-]
-
+.left-wide[
 
 You can follow the full process in the [R Packages book](https://r-pkgs.org/whole-game.html). It has specific chapters corresponding to the major requirements for building a package.
 
 &gt; Welcome to R packages by Hadley Wickham and Jenny Bryan. Packages are the fundamental units of reproducible R code. They include reusable R functions, the documentation that describes how to use them, and sample data. In this book you’ll learn how to turn your code into packages that others can easily download and use. Writing a package can seem overwhelming at first. So start with the basics and improve it over time. 
+
+]
+
+.right-narrow[
+
+&lt;img src="https://d33wubrfki0l68.cloudfront.net/19c4a5cab01d9bcb1d2edeb63ce5ba0f21870e33/68feb/images/cover.png" width="75%" /&gt;
+
+]
+
+
 
 
 
@@ -1951,7 +1957,7 @@ You can follow the full process in the [R Packages book](https://r-pkgs.org/whol
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
 <script>var slideshow = remark.create({
 "ratio": "16:9",
-"highlightStyle": "github",
+"highlightStyle": "dracula",
 "highlightLines": true,
 "countIncrementalSlides": false
 });

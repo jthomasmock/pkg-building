@@ -1,15 +1,16 @@
 ---
 title: "Package Building"
 subtitle: "with `devtools` and `usethis`"
-author: "Tom Mock and Josiah Parry"
-institute: "RStudio, PBC"
-date: "updated: `r Sys.Date()`"
+author: "Tom Mock & Josiah Parry"
+date: "`r Sys.Date()`"
 output:
   xaringan::moon_reader:
+    css: ["default", "css/my-theme.css", "css/my-fonts.css"]
+    seal: false
     lib_dir: libs
     nature:
       ratio: '16:9'
-      highlightStyle: github
+      highlightStyle: dracula
       highlightLines: true
       countIncrementalSlides: false
 ---
@@ -23,6 +24,16 @@ library(gt)
 library(devtools)
 library(usethis)
 ```
+
+class: title-slide, left, middle
+
+# `r rmarkdown::metadata$title`
+
+## `r rmarkdown::metadata$subtitle`
+
+### `r rmarkdown::metadata$author`
+
+### `r Sys.Date()`
 
 ---
 
@@ -530,7 +541,7 @@ head(mtcars, 10) %>%
 
 ---
 
-### General Functions 
+#### General Functions 
 
 * [R for Data Science, Programming](https://r4ds.had.co.nz/program-intro.html)  
 * [Software Carpentry - Creating functions](https://swcarpentry.github.io/r-novice-inflammation/02-func-R/)  
@@ -539,13 +550,13 @@ head(mtcars, 10) %>%
 
 --
 
-### Good practices on naming and style
+#### Good practices on naming and style
 
 * [`tidyverse` style guide on functions](https://style.tidyverse.org/functions.html)  
 
 --
 
-### Specific to `tidyeval` but useful overall
+#### Specific to `tidyeval` but useful overall
 
 * [`tidyeval` book](https://tidyeval.tidyverse.org/index.html)  
 * [`rlang` 0.4 blogpost](https://www.tidyverse.org/blog/2019/06/rlang-0-4-0/#a-simpler-interpolation-pattern-with)  
@@ -1145,7 +1156,7 @@ gt_add_divider <- function(gt_object, columns, ...,
 
 ### A `gt` function, documented
 
-We also need to add `gt` as an import in the `DESCRIPTION` (and git commit)
+We also need to add `gt` as an import in the `DESCRIPTION` (and git commit), this can be accomplished manually or via `usethis::use_package("gt")`. Note that you can add a specific _version_ of that required package by adding logic after the package name.
 
 ```
 Package: demopkg
@@ -1173,7 +1184,8 @@ We've gone through:
 
 * The end-to-end process of writing and creating functions with base R and with `tidyeval`  
 * How to create a minimal package  
-* How to document the package within R  
+* How to add functions to your package  
+* How to document the package and it's dependencies within R  
 * How to test the functions within your package  
 * How to create public documentation, external to R  
 
@@ -1183,23 +1195,25 @@ I hope you feel empowered that _you_ can create your own package, and with many 
 
 ---
 
-.pull-left[
 ### For followup
+
+.left-wide[
+
+You can follow the full process in the [R Packages book](https://r-pkgs.org/whole-game.html). It has specific chapters corresponding to the major requirements for building a package.
+
+> Welcome to R packages by Hadley Wickham and Jenny Bryan. Packages are the fundamental units of reproducible R code. They include reusable R functions, the documentation that describes how to use them, and sample data. In this book you’ll learn how to turn your code into packages that others can easily download and use. Writing a package can seem overwhelming at first. So start with the basics and improve it over time. 
 
 ]
 
-.pull-right[
+.right-narrow[
 
-```{r, out.width = "50%", echo = FALSE}
+```{r, out.width = "75%", echo = FALSE}
 knitr::include_graphics("https://d33wubrfki0l68.cloudfront.net/19c4a5cab01d9bcb1d2edeb63ce5ba0f21870e33/68feb/images/cover.png")
 ```
 
 ]
 
 
-You can follow the full process in the [R Packages book](https://r-pkgs.org/whole-game.html). It has specific chapters corresponding to the major requirements for building a package.
-
-> Welcome to R packages by Hadley Wickham and Jenny Bryan. Packages are the fundamental units of reproducible R code. They include reusable R functions, the documentation that describes how to use them, and sample data. In this book you’ll learn how to turn your code into packages that others can easily download and use. Writing a package can seem overwhelming at first. So start with the basics and improve it over time. 
 
 
 
