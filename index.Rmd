@@ -37,6 +37,12 @@ class: title-slide, left, middle
 
 ---
 
+layout: true
+
+<div class="my-footer"><span>https://jthomasmock.github.io/pkg-building/</span></div>
+
+---
+
 ### So you want to build a package?
 
 > Packages are the fundamental units of reproducible R code. They include reusable R functions, the documentation that describes how to use them, and sample data.  
