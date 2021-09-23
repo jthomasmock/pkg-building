@@ -1,0 +1,1205 @@
+---
+title: "Package Building"
+subtitle: "with `devtools` and `usethis`"
+author: "Tom Mock and Josiah Parry"
+institute: "RStudio, PBC"
+date: "updated: `r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    nature:
+      ratio: '16:9'
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE,
+        eval = TRUE)
+library(tidyverse)
+library(testthat)
+library(gt)
+library(devtools)
+library(usethis)
+```
+
+---
+
+### So you want to build a package?
+
+> Packages are the fundamental units of reproducible R code. They include reusable R functions, the documentation that describes how to use them, and sample data.  
+> - [Hadley Wickham and Jenny Bryan](https://r-pkgs.org/index.html)
+
+--
+
+In other words, a **package** is a home for *functions*.
+
+--
+
+And **functions** are a home for *source code*. 
+
+--
+
+Stating this a bit differently:
+
+--
+
+Functions in R are short-hand for longer source code. 
+
+--
+
+Packages are a way of describing and distributing these functions, in a structured and consistent way.
+
+---
+
+## So you want to build a ~~package~~ home for functions
+
+> Reproducibility is actually all about being as lazy as possible!  
+> – Hadley Wickham
+
+--
+
+### Functions are a way to:
+
+--
+
+* Don't repeat yourself (DRY principle) and be more efficient  
+* Share workflows and empower yourself and your team  
+* Test your code and "trust your work", or trust _others_ work    
+
+--
+
+Ultimately, functions make your work much easier, faster, and more reproducible 
+
+--
+
+...and let you be lazier, in a good way!
+
+---
+class: inverse, center, middle
+
+# Functions
+
+---
+
+### Anatomy of a Function
+
+1. A descriptive function **name**, informing the user of the function's purpose
+2. The argument(s) to the **function**, controlling the output of the function
+3. The **body** of the function, that represents all the code to be used internally
+4. What the function **returns** 
+
+```{r}
+my_function <- function(argument){
+  # fancy_code goes here
+  # using the **argument**
+  # to do something cool
+  # **returns** a result
+}
+```
+
+---
+
+### Our first `function`
+
+A simple function, with:  
+* one **argument** `x`  
+* that takes `x` and squares it  
+* and then **returns** it  
+
+```{r}
+square_val <- function(x){
+  x^2
+}
+```
+
+--
+
+```{r}
+square_val(2)
+square_val(16)
+```
+
+---
+
+### Our first `function`
+
+A simple function, with:  
+* one **argument** `x`  
+* that takes `x` and squares it  
+* and then **returns** it  
+
+But what about unintended inputs?
+
+--
+
+```{r, error = TRUE}
+"cat"^2
+square_val("cat")
+```
+
+
+---
+
+### Our first `function2`
+
+```{r, error = TRUE}
+square_val2 <- function(x){
+  
+  stopifnot("Input must be numeric" = is.numeric(x))
+  
+  x^2
+}
+```
+
+--
+
+```{r, error = TRUE}
+square_val2("cat")
+square_val2(3)
+```
+
+
+---
+
+### Generate fake data, reproducibly
+
+```{r}
+generate_df <- function(n = 10, with_seed = NULL){
+  
+  # If a seed is specified, then use it, otherwise ignore
+  if(!is.null(with_seed)){set.seed(with_seed)}
+  
+  # pad the values with repeated zeros
+  pad_length <- paste0("%0", nchar(n), "d")
+  random_int <- sample(1:n, replace = TRUE)
+  padded_int <- sprintf(pad_length, random_int)
+  
+  # create a df with combined random letters and integers
+  tibble::tibble(
+    id = paste0(
+      sample(LETTERS, size = n, replace = TRUE), padded_int
+      ),
+    values = rnorm(n = n, mean = 15, sd = 2)
+  )
+  
+}
+```
+
+---
+
+### Generate fake data, reproducibly
+
+```{r}
+generate_df(125)
+```
+
+---
+
+### Reproducibly random
+
+```{r}
+all.equal(
+  generate_df(10, with_seed = 123),
+  generate_df(10, with_seed = 123)
+)
+```
+
+--
+
+### Or fully random
+
+```{r}
+all.equal(
+  generate_df(10),
+  generate_df(10)
+)
+```
+
+
+---
+
+### Fake data, with customization
+
+```{r}
+generate_df2 <- function(n = 10, with_seed = NULL, ...){
+  
+  # If a seed is specified, then use it, otherwise ignore
+  if(!is.null(with_seed)){set.seed(with_seed)}
+  
+  # pad the values with repeated zeros
+  pad_length <- paste0("%0", nchar(n), "d")
+  random_int <- sample(1:n, replace = TRUE)
+  padded_int <- sprintf(pad_length, random_int)
+  
+  # create a df with combined random letters and integers
+  tibble::tibble(
+    id = paste0(sample(LETTERS, n, replace = TRUE), padded_int),
+    values = rnorm(n = n, ...)
+  )
+  
+}
+```
+
+---
+
+### Fake data, with customization
+
+```{r}
+generate_df2(125, with_seed = 37, mean = 10, sd = 2)
+```
+
+---
+
+### Don't repeat yourself
+
+(Sure, you could use `regex`, but let's not for now)
+
+```{r}
+my_string <- "RStudio 147"
+
+substr(my_string, 9, 11)
+```
+
+--
+
+```{r}
+substr("Wales National 148", 9, 11)
+```
+
+--
+
+```{r}
+substr("Wales National 148", -3, -1)
+```
+
+---
+
+```{r}
+substr_right <- function(x, n){
+  char_count <- nchar(x)
+  sub_n <- n - 1
+  substr(x, char_count-sub_n, char_count)
+}
+```
+
+--
+
+```{r}
+substr_right("Wales National 148", 3)
+```
+
+--
+
+```{r}
+substr_right("RStudio 147", 3)
+```
+
+---
+
+```{r}
+set.seed(73)
+company_df <- tibble::tibble(
+  x = 1:10,
+  company_id = paste(
+    c("RStudio", "Wales National", "Widget Corp", "Product Co", 
+    "Food, Inc", "DairyCo", "TechMart", "Gas Giant", 
+    "Consulting United", "Math Magic"), 
+    sample(100:999, size = 10)
+    ),
+  sales = rnorm(10, mean = 15000, sd = 1000)
+)
+
+company_df
+```
+
+---
+
+```{r substrRightEx, eval = FALSE}
+company_df %>% 
+  mutate(id_num = substr_right(company_id, 3))
+```
+
+--
+
+```{r substrRightEx, eval = TRUE, echo = FALSE}
+```
+
+---
+class: center, middle, inverse
+
+# `tidyeval` functions
+
+---
+
+### A short primer on `tidyeval`
+
+> Most dplyr verbs use **tidy evaluation** in some way. Tidy evaluation is a special type of non-standard evaluation used throughout the tidyverse. -  [Programming with `dplyr`](https://dplyr.tidyverse.org/articles/programming.html)  
+
+--
+
+This powers the ability to do:  
+
+```
+mtcars %>% 
+  # Knows where and how to find `cyl` as a column, not an object
+  group_by(cyl) %>% 
+  # knows how to find `mpg` as a column, not an object
+  summarize(n = n(), mean = mean(mpg))
+```
+
+--
+
+In my opinion, you can get most `tidyeval` things working with just three new concepts:  
+
+* Embrace your variable with `{{ var }}`, also  known as 'curly-curly'  
+* Pass the dots with `...` for many arguments  
+* Can revert back to `.data[[var]]` if you want to use `"strings"` instead of bare `columns`  
+
+---
+
+### `tidyeval` in practice
+
+.pull-left[
+```{r}
+library(dplyr)
+car_summary <- function(var){
+  mtcars %>% 
+    group_by({{var}}) %>% 
+    summarize(mean = mean(mpg),
+              n = n())
+}
+```
+
+]
+
+--
+
+.pull-right[
+```{r, error = TRUE}
+car_summary(vs)
+```
+
+]
+
+--
+
+```{r, error = TRUE}
+car_summary(vs, am)
+```
+
+---
+
+### `tidyeval` in practice
+
+```{r}
+library(dplyr)
+car_summary_dots <- function(...){
+  mtcars %>% 
+    # add the dots
+    group_by(...) %>% 
+    summarize(mean = mean(mpg),
+              n = n(), .groups = "drop")
+}
+```
+
+--
+
+```{r}
+car_summary_dots(vs, am, cyl)
+```
+
+---
+
+### `tidyeval` in practice with optional arguments
+
+```{r}
+library(dplyr)
+my_car_summary_dots2 <- function(var, ...){
+  mtcars %>% 
+    group_by({{var}}) %>% 
+    summarize(mean = mean(mpg),
+              n = n(),
+              ..., .groups = "drop")
+}
+```
+
+--
+
+```{r}
+my_car_summary_dots2(cyl, hp_mean = mean(hp), hp_sd = sd(hp))
+```
+
+---
+
+### `tidyeval` with novel data
+
+.pull-left[
+```{r}
+var_summary <- function(
+  data, var) {
+  data %>%
+    summarise(
+      n = n(), 
+      min = min({{ var }}), 
+      max = max({{ var }}),
+      .groups = "drop")
+}
+
+mtcars %>% 
+  group_by(cyl) %>% 
+  var_summary(mpg)
+```
+
+]
+
+--
+
+.pull-right[
+```{r}
+ToothGrowth %>% 
+  group_by(supp, dose) %>% 
+  var_summary(len)
+```
+
+]
+
+
+
+---
+
+### `tidyeval` with `.data` and `"strings"`
+
+```{r}
+var_summary2 <- function(data, var) {
+  data %>%
+    summarise(n = n(), 
+              min = min(.data[[var]]), 
+              max = max(.data[[var]]),
+              .groups = "drop")
+}
+```
+
+--
+
+```{r}
+mtcars %>% 
+  group_by(cyl) %>% 
+  var_summary2("mpg")
+```
+
+---
+
+### One more `tidyeval` with `gt`
+
+* [`gtExtras::gt_add_divider()`](https://jthomasmock.github.io/gtExtras/reference/gt_add_divider.html), simplified  
+
+```{r}
+library(gt)
+
+gt_add_divider <- function(gt_object, columns, ..., 
+                           include_labels = TRUE) {
+  stopifnot("Table must be of class 'gt_tbl'" = 
+              "gt_tbl" %in% class(gt_object))
+
+  gt_object %>%
+    tab_style(
+      # dots include passed named arguments to the internal function
+      style = cell_borders(sides = "right", ...),
+      locations = if (isTRUE(include_labels)) {
+        # columns to affect
+        list(cells_body(columns = {{ columns }}),
+          cells_column_labels(columns = {{ columns }}))
+      } else {
+        cells_body(columns = {{ columns }})
+      }
+    )
+}
+```
+
+---
+
+### One more `tidyeval` with `gt`
+
+```{r}
+head(mtcars, 10) %>% 
+  gt() %>% 
+  gt_add_divider(cyl, weight = px(2), color = "red")
+```
+
+---
+
+### General Functions 
+
+* [R for Data Science, Programming](https://r4ds.had.co.nz/program-intro.html)  
+* [Software Carpentry - Creating functions](https://swcarpentry.github.io/r-novice-inflammation/02-func-R/)  
+* [Datacarpentry - functions](https://datacarpentry.org/semester-biology/materials/functions-R/)  
+* [UC Business Analytics R Functions guide](https://uc-r.github.io/functions)  
+
+--
+
+### Good practices on naming and style
+
+* [`tidyverse` style guide on functions](https://style.tidyverse.org/functions.html)  
+
+--
+
+### Specific to `tidyeval` but useful overall
+
+* [`tidyeval` book](https://tidyeval.tidyverse.org/index.html)  
+* [`rlang` 0.4 blogpost](https://www.tidyverse.org/blog/2019/06/rlang-0-4-0/#a-simpler-interpolation-pattern-with)  
+* [Programming w/ `dplyr`](https://dplyr.tidyverse.org/articles/programming.html)  
+* [Using `ggplot2` in packages](https://ggplot2.tidyverse.org/articles/ggplot2-in-packages.html)  
+* [Programming w/ `ggplot2`](https://ggplot2-book.org/programming.html)  
+* [Advanced R, metaprogramming](https://adv-r.hadley.nz/metaprogramming.html)  
+
+---
+
+### More realistic internal functions
+
+* Connect to and query an internal database w/ `dbplyr`  
+
+* Take team-specific input data and clean in consistent way  
+
+* Create a specific plot/table with your colors, logo, and specific data  
+
+* Generate an entire report  
+
+--
+
+* ANYTHING you do repeatedly, and want to repeat or test without having to redo manually  
+
+---
+
+### Internal packages
+
+* [Building a team of internal R packages - Emily Riederer](https://emilyriederer.netlify.app/post/team-of-packages/)
+
+> More and more organizations are beginning to write their own internal R packages. These internal tools have great potential to improve an organization’s code quality, promote reproducible analysis frameworks, and enhance knowledge management.  
+>
+> Developers of such tools are often inspired by their favorite open-source tools and, consequently, rely on the design patterns and best practices they have observed.  
+>
+> Although this is a good starting position, internal packages have unique challenges (such as a smaller developer community) and opportunities (such as an intimate understanding of the problem space and over-arching organizational goals).  
+>
+> Internal packages can realize their full potential by engineering to embrace these unique features.
+
+---
+class: center, inverse, middle
+
+# Back to package development
+
+---
+
+### Why a package, and not just `source()`?
+
+`source()` references a specific `.R` file, reads it all in and executes it (which can include adding a function to the environment).
+
+--
+
+`source()`-ing:  
+* Doesn't "know" anything about versioning of the code, ie a package version  
+* Doesn't have included testing  
+* Doesn't have included documentation  
+* Requires the `.R` file to be copied into the project  
+* Can be modified or deleted (accidentally) by the end-user  
+
+---
+
+### Anatomy of a package
+
+* **Metadata** via the `DESCRIPTION`, including the name of the package, description of the package, the version of the package, and any package dependencies  
+
+--
+
+* **Source code** via `.R` files, that live in the `R/` directory.  
+
+--
+
+* Special `roxygen` comments inside the `.R` files that describe how the function operates and its arguments, dependencies, and other metadata  
+
+--
+
+* The **namespace** for the *exported functions* you have written, and the *imported functions* you bring in  
+
+--
+
+* Tests that confirm your function "works as intended"  
+
+--
+
+* Other things (installed files, compiled code, data, tutorials, vignettes)  
+
+---
+
+### Writing packages, but easier
+
+While creating a package can seem intimidating, the `tidyverse` team has spent *years* crafting meta-packages to make life easier to create packages. These are used everyday by 1000s of package developers, and really do make the complicated things easier... with functions!
+
+--
+
+* [`devtools`](https://devtools.r-lib.org/):  
+
+> The aim of devtools is to make package development easier by providing R functions that simplify and expedite common tasks.
+
+--
+
+* [`usethis`](https://usethis.r-lib.org/)  
+
+> usethis is a workflow package: it automates repetitive tasks that arise during project setup and development, both for R packages and non-package projects.
+
+
+---
+
+### A package in 5 min
+
+DEMO
+
+---
+
+### The "Whole game"
+
+```{r}
+# install.packages(c("devtools", "usethis"))
+library(devtools)
+library(usethis)
+```
+
+---
+
+### Create a blank package
+
+Can call `usethis::create_package()` or use the RStudio GUI.
+
+![](images/rstudio-create-pkg.gif)
+
+---
+
+### Version Control
+
+No shame or shade from us, but you _should_ be using version control for your packages, for your production code, and most, if not all, of your important analysis code. We'll focus on packages for now. This allows your team to collaborate on development, and test changes to the code/packages with code review.
+
+--
+
+At RStudio, we typically default to `git` and GitHub, although many folks may use SVN, BitBucket, GitLab, etc. Whatever you're using is great, but note that `usethis` is closely tied to GitHub.
+
+--
+
+We can add a `.git` reference, and optionally add GitHub.
+
+```{r, eval = FALSE}
+usethis::use_git()
+# optionally use github, but you should make a connection
+# with whatever your version control is
+# usethis::use_github()
+```
+
+--
+
+To read more about Version Control, and specifically how to use `git` with R, please see: [happygitwithr.com](https://happygitwithr.com/) by Jenny Bryan
+
+---
+
+### Start adding our functions
+
+This will create a minimal function `.R` file and open it for interactive editing. We can copy our first basic function over and add it to this file.
+
+```{r, eval = FALSE}
+usethis::use_r("square_val.R")
+
+## ✓ Setting active project to '/Users/thomasmock/demopkg'
+## • Edit 'R/square_val.R'
+## • Call `use_test()` to create a matching test file
+```
+
+---
+
+### Load the function
+
+We can load the function with `devtools::load_all()`, this will essentially source the function so we can interactively use it or test it.
+
+> `load_all()` has made the function available, although it does not exist in the global workspace.
+
+```{r, eval = FALSE}
+devtools::load_all()
+```
+
+--
+
+Once we have confirmed the minimal function is working, we should commit our changes! We can do this via the RStudio `GIT` pane or via the terminal.
+
+---
+
+### Check the function
+
+> We have empirical evidence that our function works. But how can we be sure that all the moving parts of the this new package still work? This may seem silly to check, after such a small addition, but it’s good to establish the habit of checking this often.
+
+--
+
+We can do this with the `check()` function.
+
+--
+
+> `check` automatically builds and checks a source package, using all known best practices
+
+```{r, eval = FALSE}
+devtools::check()
+```
+
+--
+
+The output of this function call is quite verbose as it does a LOT of useful checks. The summary at the end tells you how many errors, warnings, or notes are returned. 
+
+It's important to run this frequently, as you would rather have small moments of friction to fix, rather than doing it much later and having an overwhelming amount of changes to make.
+
+---
+
+### License
+
+Now, the function works fine, but we haven't added a license, which `check()` will throw as a warning. 
+
+--
+
+This may seem silly if you don't intend to publish the package externally to your org, but you should at least define the license so that your wishes are respected as to reuse and ownership of the open source code is clear.
+
+--
+
+[R Packages](https://r-pkgs.org/license.html):  
+
+> Software licensing is a large and complicated field, made particularly complex because it lies at the intersection of programming and law. Fortunately, you don’t need to be an expert to do the right thing: respecting how an author wants their code to be treated as indicated by the license they’ve picked.
+
+I default to `use_mit_license()`, but you can read more about licensing:  
+
+* [Common patterns for licensing R](https://thinkr-open.github.io/licensing-r/rlicense.html)  
+* [R Packages - licensing](https://r-pkgs.org/license.html)  
+* [Choose a License](https://choosealicense.com/)  
+
+---
+
+### `document()` your code
+
+[R Packages](https://r-pkgs.org/man.html):  
+
+> Wouldn’t it be nice to get help on our custom function, just like we do with other R functions? This requires that your package have a special R documentation file, man/function_name.Rd, written in an R-specific markup language that is sort of like LaTeX. Luckily we don’t necessarily have to author that directly.
+
+--
+
+We can open our existing function, and using RStudio:  
+* `Code > insert roxygen skeleton`  
+
+I like to do this via the [RStudio Command Palette](https://blog.rstudio.com/2020/10/14/rstudio-v1-4-preview-command-palette/). 
+
+---
+
+### Let your code breathe on it's own with `roxygen2`
+
+* [`roxygen2`](https://roxygen2.r-lib.org/)  
+
+> The premise of `roxygen2` is simple: describe your functions in comments next to their definitions and `roxygen2` will process your source code and comments to automatically generate `.Rd` files in `man/`, `NAMESPACE`, and, if needed, the Collate field in `DESCRIPTION`.
+
+You can read more about `roxygen2` in the helpful [Introduction to `roxygen2`](https://roxygen2.r-lib.org/articles/roxygen2.html).
+
+--
+
+`roxygen` items are indicated with special comments (`#'`), ie:
+
+```
+#' @param argument A numeric input, that will be squared
+```
+
+---
+
+### Let your code breathe on it's own with `roxygen2`
+
+Now, the amount of things you can document can seem overwhelming, but there's only a few things that are specifically necessary. 
+
+--
+
+* Title of the function w/ **`@title`**  
+* Description of the function purpose with **`@description`**  
+* Documenting the function arguments/parameters with **`@param`**  
+* Specifying it for export with **`@export`**  
+* If it requires external packages, reference the package or specific package functions with **`@import`** and **`@importFrom`**  
+* What does the function return with **`@return`**  
+
+--
+
+While it's not _required_ it's exceptionally helpful to add a minimal example with **`@examples`** 
+
+---
+
+### Basic example
+
+```
+#' @title  Take a numeric value and square it
+#' @description This function takes a numeric value, and squares it. 
+#' It is intended to be used as a replacement for `value^2`
+#' @param x A numeric input, that will be squared
+#'
+#' @return a numeric value
+#' @export
+#' @examples
+#' square_val2(4)
+
+square_val2 <- function(x){
+  
+  stopifnot("Input must be numeric" = is.numeric(x))
+  
+  x^2
+}
+```
+
+---
+
+### Now `document()` it
+
+Now that we have added the `roxygen2` comments, we can call `devtools::document()` to write out the documentation.
+
+--
+
+We can then, just as expected, be able to see the benefit of our labor!
+
+```{r, eval = FALSE}
+?square_val2
+```
+
+--
+
+While this is great, it's also done some more behind the scenes work. It's added the `square_val2` function as an export in the `NAMESPACE` file.
+
+```
+# Generated by roxygen2: do not edit by hand
+
+export(square_val2)
+```
+
+---
+
+### Check once, check again
+
+Now, we should `devtools::check()` one more time, and make sure we haven't missed anything!
+
+--
+
+Also... new `git` commit! Commit early, commit often!
+
+---
+
+### The joy of package installation
+
+We can now, within the package project, install!
+
+`devtools::install()` when run inside the specific package project, will install the package locally.
+
+--
+
+and just as you would expect, we can now load it like any other package!
+
+```{r, eval = FALSE}
+library(demopkg)
+
+square_val2(16)
+#> [1] 256
+```
+
+---
+
+### Add more functions
+
+We can add all of our other functions with a similar workflow...
+
+---
+
+### ~~Add more functions~~ Add our tests
+
+We can add all of our other functions with a similar workflow...
+
+but for the sake of time we should talk about testing our functions with [`testthat`](https://usethis.r-lib.org/index.html).
+
+---
+
+### Unit testing with `testthat`
+
+> Whenever you are tempted to type something into a print statement or a debugger expression, write it as a test instead.  
+> — Martin Fowler  
+
+--
+
+Up until now, we've only tested our function interactively and checked for package errors via `check()`. 
+
+--
+
+> We can formalize and expand this with some unit tests via `testthat`. This means we express a few concrete expectations about the correct `square_val2()` result for various inputs.  
+> - [R Packages, testing](https://r-pkgs.org/tests.html)
+
+--
+
+[Unit tests are:](https://en.wikipedia.org/wiki/Unit_testing)  
+
+> typically automated tests written and run by software developers to ensure that a section of an application (known as the "unit") meets its design and behaves as intended...By writing tests first for the smallest testable units, then the compound behaviors between those, one can build up comprehensive tests for complex ~~applications~~ [packages]
+
+---
+
+### Use `testthat`
+
+> `usethis` is a workflow package: it automates repetitive tasks that arise during project setup and development, both for R packages and non-package projects.
+
+One of the features it provides is the ability to quickly create a `testthat` folder for your package.
+
+```{r, eval = FALSE}
+library(usethis)
+usethis::use_testthat()
+```
+
+---
+
+### Test structures
+
+Tests are organised hierarchically: **expectations** are grouped into **tests** which are organised in files:  
+
+--
+
+* An **expectation** is the atom of testing. It describes the expected result of a computation: Does it have the right value and right class? Does it produce error messages when it should? An expectation automates visual checking of results in the console. Expectations are functions that start with `expect_`.  
+
+--
+
+* A **test** groups together multiple expectations to test the output from a simple function, a range of possibilities for a single parameter from a more complicated function, or tightly related functionality from across multiple functions. This is why they are sometimes called unit as they test one **unit** of functionality. A test is created with `test_that()`.  
+
+--
+
+* A **file** groups together multiple related tests. Files are given a human readable name with `context()`.
+
+---
+
+### `testthat` example
+
+Interactively, you can write and check tests.
+
+--
+
+```{r, eval = FALSE}
+library(demopkg)
+library(testthat)
+```
+
+```{r}
+test_that("Squared values match expectations", {
+  expect_equal(square_val2(2), 2^2)
+  expect_equal(square_val2(4), 4^2)
+  expect_equal(square_val2(16), 16^2)
+})
+```
+
+```{r}
+test_that("Non-numeric or missing inputs should error", {
+  expect_error(square_val2("a"), "Input must be numeric")
+  expect_error(square_val2(factor("a")), "Input must be numeric")
+  expect_error(square_val2(mtcars), "Input must be numeric")
+  expect_error(square_val2(NA), "Input must be numeric")
+})
+```
+
+---
+
+### `testthat` Test structure
+
+> A test file lives in `tests/testthat/`. Its name must start with `test`. Here’s an example of a usable test file:
+
+--
+
+```{r, eval = FALSE}
+context("Confirm values are valid & non-numeric inputs error")
+library(demopkg)
+
+test_that("Squared values match expectations", {
+  expect_equal(square_val2(2), 2^2)
+  expect_equal(square_val2(4), 4^2)
+  expect_equal(square_val2(16), 16^2)
+})
+#> Test passed 🥇
+
+test_that("Non-numeric or missing inputs should error", {
+  expect_error(square_val2("a"))
+  expect_error(square_val2(factor("a")))
+  expect_error(square_val2(mtcars))
+  expect_error(square_val2(NA))
+  expect_error(square_val2(NULL))
+})
+#> Test passed 🥳
+```
+
+
+---
+
+### What happens if they don't match?
+
+--
+
+```{r, error = TRUE}
+square_val2("string")
+expect_error(square_val2("string"), "The input must be numeric")
+```
+
+--
+
+```{r, error = TRUE}
+square_val2(2)
+expect_equal(square_val2(2), 2^3)
+```
+
+---
+
+### More on `testing`
+
+While we've covered the basics of unit testing via `testthat`, you'll likely want to read more about it.
+
+* [R Packages, Testing chapter](https://r-pkgs.org/tests.html)  
+* [`testhat` documentation](https://testthat.r-lib.org/)  
+* [A long form example of robust testing](https://themockup.blog/posts/2021-03-07-creating-a-custom-gt-function-for-aligning-first-row-text-and-testing-it-with-testthat/)
+
+--
+
+Let's move on to more documentation!
+
+---
+
+### Build static `pkgdown` site
+
+You can build your very own `pkgdown` site, just like the one for [`devtools`](https://devtools.r-lib.org/reference/build_site.html) by referencing the existing documentation.
+
+--
+
+This is super easy, just use `devtools::build_site()`
+
+> `devtools::build_site()` is a shortcut for `pkgdown::build_site()`, it generates the static HTML documentation.
+
+```{r, eval = FALSE}
+devtools::build_site()
+```
+
+--
+
+This is a nice addendum beyond the built-in documentation within R, and most notably allows you to explore the documentation or share the documentation outside of needing R. As such, you can share information about the package within a team prior to even installing the package.
+
+--
+
+The static HTML generated by `pkgdown` can be hosted internally behind authentication via a proper data science tool like RStudio Connect, or publicly on GitHub pages or Netlify. 
+
+---
+
+### Reference external packages
+
+Now so far, we've not used any additional packages external to base R. To add additional packages, we need to reference them in the `.R` file and in the `DESCRIPTION`.
+
+Let's revisit our `gt` example, and show the specific components for change.
+
+---
+
+### A `gt` function
+
+```{r}
+gt_add_divider <- function(gt_object, columns, ..., 
+                           include_labels = TRUE) {
+  stopifnot("Table must be of class 'gt_tbl'" = 
+              "gt_tbl" %in% class(gt_object))
+
+  gt_object %>%
+    tab_style(
+      # dots include passed named arguments to the internal function
+      style = cell_borders(sides = "right", ...),
+      locations = if (isTRUE(include_labels)) {
+        # columns to affect
+        list(cells_body(columns = {{ columns }}),
+          cells_column_labels(columns = {{ columns }}))
+      } else {
+        cells_body(columns = {{ columns }})
+      }
+    )
+}
+```
+
+---
+
+### A `gt` function, documented
+
+We need to specify that we are importing `gt`, so that it's arguments can be referenced in our custom function. We should git commit these changes, and then run `devtools::document()` to rebuild and reference these docs.
+
+That will add `gt` as an import in the namespace file, and add `gt_add_divider()` as an export.
+
+```{r, eval = FALSE}
+#' @title Add a column divider to a gt table
+#' @description Inserts a border to the right of a specific column
+#' @param gt_object an existing gt_tbl
+#' @param columns The specific columns where a border will be added
+#' @param ... Additional arguments passed to `gt::cell_borders()`
+#' @param include_labels a logical indicating if the border includes column labels
+#' @importFrom gt %>%
+#' @import gt
+#' @export
+
+gt_add_divider <- function(gt_object, columns, ..., 
+                           include_labels = TRUE) {code}
+```
+
+---
+
+### A `gt` function, documented
+
+We also need to add `gt` as an import in the `DESCRIPTION` (and git commit)
+
+```
+Package: demopkg
+Type: Package
+Title: Our cool new helper function package
+Version: 0.1.0
+Author: Thomas Mock
+Maintainer: Josiah Parry <jparry@rstudio.com>
+Description: An amazing package that has lots of cool new features.
+    It also includes a cool new gt function.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.1.1
+Roxygen: list(markdown = TRUE)
+Imports: 
+    gt (>= 0.3)
+```
+
+---
+
+### Wrap-up
+
+We've gone through:  
+
+* The end-to-end process of writing and creating functions with base R and with `tidyeval`  
+* How to create a minimal package  
+* How to document the package within R  
+* How to test the functions within your package  
+* How to create public documentation, external to R  
+
+--
+
+I hope you feel empowered that _you_ can create your own package, and with many best practices. Ultimately, once you get started you'll quickly see that the tooling has been written to make the process very user friendly.
+
+---
+
+.pull-left[
+### For followup
+
+]
+
+.pull-right[
+
+```{r, out.width = "50%", echo = FALSE}
+knitr::include_graphics("https://d33wubrfki0l68.cloudfront.net/19c4a5cab01d9bcb1d2edeb63ce5ba0f21870e33/68feb/images/cover.png")
+```
+
+]
+
+
+You can follow the full process in the [R Packages book](https://r-pkgs.org/whole-game.html). It has specific chapters corresponding to the major requirements for building a package.
+
+> Welcome to R packages by Hadley Wickham and Jenny Bryan. Packages are the fundamental units of reproducible R code. They include reusable R functions, the documentation that describes how to use them, and sample data. In this book you’ll learn how to turn your code into packages that others can easily download and use. Writing a package can seem overwhelming at first. So start with the basics and improve it over time. 
+
+
+

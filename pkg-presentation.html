@@ -1,0 +1,2072 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Package Building</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Tom Mock and Josiah Parry" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <link href="libs/remark-css/default.css" rel="stylesheet" />
+    <link href="libs/remark-css/default-fonts.css" rel="stylesheet" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Package Building
+## with <code>devtools</code> and <code>usethis</code>
+### Tom Mock and Josiah Parry
+### RStudio, PBC
+### updated: 2021-09-23
+
+---
+
+
+
+
+---
+
+### So you want to build a package?
+
+&gt; Packages are the fundamental units of reproducible R code. They include reusable R functions, the documentation that describes how to use them, and sample data.  
+&gt; - [Hadley Wickham and Jenny Bryan](https://r-pkgs.org/index.html)
+
+--
+
+In other words, a **package** is a home for *functions*.
+
+--
+
+And **functions** are a home for *source code*. 
+
+--
+
+Stating this a bit differently:
+
+--
+
+Functions in R are short-hand for longer source code. 
+
+--
+
+Packages are a way of describing and distributing these functions, in a structured and consistent way.
+
+---
+
+## So you want to build a ~~package~~ home for functions
+
+&gt; Reproducibility is actually all about being as lazy as possible!  
+&gt; – Hadley Wickham
+
+--
+
+### Functions are a way to:
+
+--
+
+* Don't repeat yourself (DRY principle) and be more efficient  
+* Share workflows and empower yourself and your team  
+* Test your code and "trust your work", or trust _others_ work    
+
+--
+
+Ultimately, functions make your work much easier, faster, and more reproducible 
+
+--
+
+...and let you be lazier, in a good way!
+
+---
+class: inverse, center, middle
+
+# Functions
+
+---
+
+### Anatomy of a Function
+
+1. A descriptive function **name**, informing the user of the function's purpose
+2. The argument(s) to the **function**, controlling the output of the function
+3. The **body** of the function, that represents all the code to be used internally
+4. What the function **returns** 
+
+
+```r
+my_function &lt;- function(argument){
+  # fancy_code goes here
+  # using the **argument**
+  # to do something cool
+  # **returns** a result
+}
+```
+
+---
+
+### Our first `function`
+
+A simple function, with:  
+* one **argument** `x`  
+* that takes `x` and squares it  
+* and then **returns** it  
+
+
+```r
+square_val &lt;- function(x){
+  x^2
+}
+```
+
+--
+
+
+```r
+square_val(2)
+```
+
+```
+## [1] 4
+```
+
+```r
+square_val(16)
+```
+
+```
+## [1] 256
+```
+
+---
+
+### Our first `function`
+
+A simple function, with:  
+* one **argument** `x`  
+* that takes `x` and squares it  
+* and then **returns** it  
+
+But what about unintended inputs?
+
+--
+
+
+```r
+"cat"^2
+```
+
+```
+## Error in "cat"^2: non-numeric argument to binary operator
+```
+
+```r
+square_val("cat")
+```
+
+```
+## Error in x^2: non-numeric argument to binary operator
+```
+
+
+---
+
+### Our first `function2`
+
+
+```r
+square_val2 &lt;- function(x){
+  
+  stopifnot("Input must be numeric" = is.numeric(x))
+  
+  x^2
+}
+```
+
+--
+
+
+```r
+square_val2("cat")
+```
+
+```
+## Error in square_val2("cat"): Input must be numeric
+```
+
+```r
+square_val2(3)
+```
+
+```
+## [1] 9
+```
+
+
+---
+
+### Generate fake data, reproducibly
+
+
+```r
+generate_df &lt;- function(n = 10, with_seed = NULL){
+  
+  # If a seed is specified, then use it, otherwise ignore
+  if(!is.null(with_seed)){set.seed(with_seed)}
+  
+  # pad the values with repeated zeros
+  pad_length &lt;- paste0("%0", nchar(n), "d")
+  random_int &lt;- sample(1:n, replace = TRUE)
+  padded_int &lt;- sprintf(pad_length, random_int)
+  
+  # create a df with combined random letters and integers
+  tibble::tibble(
+    id = paste0(
+      sample(LETTERS, size = n, replace = TRUE), padded_int
+      ),
+    values = rnorm(n = n, mean = 15, sd = 2)
+  )
+  
+}
+```
+
+---
+
+### Generate fake data, reproducibly
+
+
+```r
+generate_df(125)
+```
+
+```
+## # A tibble: 125 × 2
+##    id    values
+##    &lt;chr&gt;  &lt;dbl&gt;
+##  1 H036    14.8
+##  2 R005    13.6
+##  3 P047    14.6
+##  4 S060    15.8
+##  5 Q027    12.5
+##  6 M003    16.9
+##  7 T023    13.7
+##  8 B069    16.0
+##  9 Z021    12.0
+## 10 B062    15.5
+## # … with 115 more rows
+```
+
+---
+
+### Reproducibly random
+
+
+```r
+all.equal(
+  generate_df(10, with_seed = 123),
+  generate_df(10, with_seed = 123)
+)
+```
+
+```
+## [1] TRUE
+```
+
+--
+
+### Or fully random
+
+
+```r
+all.equal(
+  generate_df(10),
+  generate_df(10)
+)
+```
+
+```
+## [1] "Component \"id\": 10 string mismatches"                   
+## [2] "Component \"values\": Mean relative difference: 0.1569146"
+```
+
+
+---
+
+### Fake data, with customization
+
+
+```r
+generate_df2 &lt;- function(n = 10, with_seed = NULL, ...){
+  
+  # If a seed is specified, then use it, otherwise ignore
+  if(!is.null(with_seed)){set.seed(with_seed)}
+  
+  # pad the values with repeated zeros
+  pad_length &lt;- paste0("%0", nchar(n), "d")
+  random_int &lt;- sample(1:n, replace = TRUE)
+  padded_int &lt;- sprintf(pad_length, random_int)
+  
+  # create a df with combined random letters and integers
+  tibble::tibble(
+    id = paste0(sample(LETTERS, n, replace = TRUE), padded_int),
+    values = rnorm(n = n, ...)
+  )
+  
+}
+```
+
+---
+
+### Fake data, with customization
+
+
+```r
+generate_df2(125, with_seed = 37, mean = 10, sd = 2)
+```
+
+```
+## # A tibble: 125 × 2
+##    id    values
+##    &lt;chr&gt;  &lt;dbl&gt;
+##  1 L054   10.2 
+##  2 Y047   11.2 
+##  3 Q024   12.7 
+##  4 V050    9.61
+##  5 V003   11.1 
+##  6 X104    8.84
+##  7 H109    7.73
+##  8 G036    9.49
+##  9 E041   11.3 
+## 10 Z052   12.0 
+## # … with 115 more rows
+```
+
+---
+
+### Don't repeat yourself
+
+(Sure, you could use `regex`, but let's not for now)
+
+
+```r
+my_string &lt;- "RStudio 147"
+
+substr(my_string, 9, 11)
+```
+
+```
+## [1] "147"
+```
+
+--
+
+
+```r
+substr("Wales National 148", 9, 11)
+```
+
+```
+## [1] "tio"
+```
+
+--
+
+
+```r
+substr("Wales National 148", -3, -1)
+```
+
+```
+## [1] ""
+```
+
+---
+
+
+```r
+substr_right &lt;- function(x, n){
+  char_count &lt;- nchar(x)
+  sub_n &lt;- n - 1
+  substr(x, char_count-sub_n, char_count)
+}
+```
+
+--
+
+
+```r
+substr_right("Wales National 148", 3)
+```
+
+```
+## [1] "148"
+```
+
+--
+
+
+```r
+substr_right("RStudio 147", 3)
+```
+
+```
+## [1] "147"
+```
+
+---
+
+
+```r
+set.seed(73)
+company_df &lt;- tibble::tibble(
+  x = 1:10,
+  company_id = paste(
+    c("RStudio", "Wales National", "Widget Corp", "Product Co", 
+    "Food, Inc", "DairyCo", "TechMart", "Gas Giant", 
+    "Consulting United", "Math Magic"), 
+    sample(100:999, size = 10)
+    ),
+  sales = rnorm(10, mean = 15000, sd = 1000)
+)
+
+company_df
+```
+
+```
+## # A tibble: 10 × 3
+##        x company_id             sales
+##    &lt;int&gt; &lt;chr&gt;                  &lt;dbl&gt;
+##  1     1 RStudio 416           15628.
+##  2     2 Wales National 426    15713.
+##  3     3 Widget Corp 443       16373.
+##  4     4 Product Co 980        16428.
+##  5     5 Food, Inc 500         12753.
+##  6     6 DairyCo 914           14076.
+##  7     7 TechMart 874          13862.
+##  8     8 Gas Giant 374         14887.
+##  9     9 Consulting United 823 16286.
+## 10    10 Math Magic 706        15410.
+```
+
+---
+
+
+```r
+company_df %&gt;% 
+  mutate(id_num = substr_right(company_id, 3))
+```
+
+--
+
+
+```
+## # A tibble: 10 × 4
+##        x company_id             sales id_num
+##    &lt;int&gt; &lt;chr&gt;                  &lt;dbl&gt; &lt;chr&gt; 
+##  1     1 RStudio 416           15628. 416   
+##  2     2 Wales National 426    15713. 426   
+##  3     3 Widget Corp 443       16373. 443   
+##  4     4 Product Co 980        16428. 980   
+##  5     5 Food, Inc 500         12753. 500   
+##  6     6 DairyCo 914           14076. 914   
+##  7     7 TechMart 874          13862. 874   
+##  8     8 Gas Giant 374         14887. 374   
+##  9     9 Consulting United 823 16286. 823   
+## 10    10 Math Magic 706        15410. 706
+```
+
+---
+class: center, middle, inverse
+
+# `tidyeval` functions
+
+---
+
+### A short primer on `tidyeval`
+
+&gt; Most dplyr verbs use **tidy evaluation** in some way. Tidy evaluation is a special type of non-standard evaluation used throughout the tidyverse. -  [Programming with `dplyr`](https://dplyr.tidyverse.org/articles/programming.html)  
+
+--
+
+This powers the ability to do:  
+
+```
+mtcars %&gt;% 
+  # Knows where and how to find `cyl` as a column, not an object
+  group_by(cyl) %&gt;% 
+  # knows how to find `mpg` as a column, not an object
+  summarize(n = n(), mean = mean(mpg))
+```
+
+--
+
+In my opinion, you can get most `tidyeval` things working with just three new concepts:  
+
+* Embrace your variable with `{{ var }}`, also  known as 'curly-curly'  
+* Pass the dots with `...` for many arguments  
+* Can revert back to `.data[[var]]` if you want to use `"strings"` instead of bare `columns`  
+
+---
+
+### `tidyeval` in practice
+
+.pull-left[
+
+```r
+library(dplyr)
+car_summary &lt;- function(var){
+  mtcars %&gt;% 
+    group_by({{var}}) %&gt;% 
+    summarize(mean = mean(mpg),
+              n = n())
+}
+```
+
+]
+
+--
+
+.pull-right[
+
+```r
+car_summary(vs)
+```
+
+```
+## # A tibble: 2 × 3
+##      vs  mean     n
+##   &lt;dbl&gt; &lt;dbl&gt; &lt;int&gt;
+## 1     0  16.6    18
+## 2     1  24.6    14
+```
+
+]
+
+--
+
+
+```r
+car_summary(vs, am)
+```
+
+```
+## Error in car_summary(vs, am): unused argument (am)
+```
+
+---
+
+### `tidyeval` in practice
+
+
+```r
+library(dplyr)
+car_summary_dots &lt;- function(...){
+  mtcars %&gt;% 
+    # add the dots
+    group_by(...) %&gt;% 
+    summarize(mean = mean(mpg),
+              n = n(), .groups = "drop")
+}
+```
+
+--
+
+
+```r
+car_summary_dots(vs, am, cyl)
+```
+
+```
+## # A tibble: 7 × 5
+##      vs    am   cyl  mean     n
+##   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;int&gt;
+## 1     0     0     8  15.0    12
+## 2     0     1     4  26       1
+## 3     0     1     6  20.6     3
+## 4     0     1     8  15.4     2
+## 5     1     0     4  22.9     3
+## 6     1     0     6  19.1     4
+## 7     1     1     4  28.4     7
+```
+
+---
+
+### `tidyeval` in practice with optional arguments
+
+
+```r
+library(dplyr)
+my_car_summary_dots2 &lt;- function(var, ...){
+  mtcars %&gt;% 
+    group_by({{var}}) %&gt;% 
+    summarize(mean = mean(mpg),
+              n = n(),
+              ..., .groups = "drop")
+}
+```
+
+--
+
+
+```r
+my_car_summary_dots2(cyl, hp_mean = mean(hp), hp_sd = sd(hp))
+```
+
+```
+## # A tibble: 3 × 5
+##     cyl  mean     n hp_mean hp_sd
+##   &lt;dbl&gt; &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt; &lt;dbl&gt;
+## 1     4  26.7    11    82.6  20.9
+## 2     6  19.7     7   122.   24.3
+## 3     8  15.1    14   209.   51.0
+```
+
+---
+
+### `tidyeval` with novel data
+
+.pull-left[
+
+```r
+var_summary &lt;- function(
+  data, var) {
+  data %&gt;%
+    summarise(
+      n = n(), 
+      min = min({{ var }}), 
+      max = max({{ var }}),
+      .groups = "drop")
+}
+
+mtcars %&gt;% 
+  group_by(cyl) %&gt;% 
+  var_summary(mpg)
+```
+
+```
+## # A tibble: 3 × 4
+##     cyl     n   min   max
+##   &lt;dbl&gt; &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1     4    11  21.4  33.9
+## 2     6     7  17.8  21.4
+## 3     8    14  10.4  19.2
+```
+
+]
+
+--
+
+.pull-right[
+
+```r
+ToothGrowth %&gt;% 
+  group_by(supp, dose) %&gt;% 
+  var_summary(len)
+```
+
+```
+## # A tibble: 6 × 5
+##   supp   dose     n   min   max
+##   &lt;fct&gt; &lt;dbl&gt; &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1 OJ      0.5    10   8.2  21.5
+## 2 OJ      1      10  14.5  27.3
+## 3 OJ      2      10  22.4  30.9
+## 4 VC      0.5    10   4.2  11.5
+## 5 VC      1      10  13.6  22.5
+## 6 VC      2      10  18.5  33.9
+```
+
+]
+
+
+
+---
+
+### `tidyeval` with `.data` and `"strings"`
+
+
+```r
+var_summary2 &lt;- function(data, var) {
+  data %&gt;%
+    summarise(n = n(), 
+              min = min(.data[[var]]), 
+              max = max(.data[[var]]),
+              .groups = "drop")
+}
+```
+
+--
+
+
+```r
+mtcars %&gt;% 
+  group_by(cyl) %&gt;% 
+  var_summary2("mpg")
+```
+
+```
+## # A tibble: 3 × 4
+##     cyl     n   min   max
+##   &lt;dbl&gt; &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1     4    11  21.4  33.9
+## 2     6     7  17.8  21.4
+## 3     8    14  10.4  19.2
+```
+
+---
+
+### One more `tidyeval` with `gt`
+
+* [`gtExtras::gt_add_divider()`](https://jthomasmock.github.io/gtExtras/reference/gt_add_divider.html), simplified  
+
+
+```r
+library(gt)
+
+gt_add_divider &lt;- function(gt_object, columns, ..., 
+                           include_labels = TRUE) {
+  stopifnot("Table must be of class 'gt_tbl'" = 
+              "gt_tbl" %in% class(gt_object))
+
+  gt_object %&gt;%
+    tab_style(
+      # dots include passed named arguments to the internal function
+      style = cell_borders(sides = "right", ...),
+      locations = if (isTRUE(include_labels)) {
+        # columns to affect
+        list(cells_body(columns = {{ columns }}),
+          cells_column_labels(columns = {{ columns }}))
+      } else {
+        cells_body(columns = {{ columns }})
+      }
+    )
+}
+```
+
+---
+
+### One more `tidyeval` with `gt`
+
+
+```r
+head(mtcars, 10) %&gt;% 
+  gt() %&gt;% 
+  gt_add_divider(cyl, weight = px(2), color = "red")
+```
+
+<div id="tjiwclykiq" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>html {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+}
+
+#tjiwclykiq .gt_table {
+  display: table;
+  border-collapse: collapse;
+  margin-left: auto;
+  margin-right: auto;
+  color: #333333;
+  font-size: 16px;
+  font-weight: normal;
+  font-style: normal;
+  background-color: #FFFFFF;
+  width: auto;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #A8A8A8;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #A8A8A8;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+}
+
+#tjiwclykiq .gt_heading {
+  background-color: #FFFFFF;
+  text-align: center;
+  border-bottom-color: #FFFFFF;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#tjiwclykiq .gt_title {
+  color: #333333;
+  font-size: 125%;
+  font-weight: initial;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-bottom-color: #FFFFFF;
+  border-bottom-width: 0;
+}
+
+#tjiwclykiq .gt_subtitle {
+  color: #333333;
+  font-size: 85%;
+  font-weight: initial;
+  padding-top: 0;
+  padding-bottom: 6px;
+  border-top-color: #FFFFFF;
+  border-top-width: 0;
+}
+
+#tjiwclykiq .gt_bottom_border {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#tjiwclykiq .gt_col_headings {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#tjiwclykiq .gt_col_heading {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  overflow-x: hidden;
+}
+
+#tjiwclykiq .gt_column_spanner_outer {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#tjiwclykiq .gt_column_spanner_outer:first-child {
+  padding-left: 0;
+}
+
+#tjiwclykiq .gt_column_spanner_outer:last-child {
+  padding-right: 0;
+}
+
+#tjiwclykiq .gt_column_spanner {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  overflow-x: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+#tjiwclykiq .gt_group_heading {
+  padding: 8px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#tjiwclykiq .gt_empty_group_heading {
+  padding: 0.5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#tjiwclykiq .gt_from_md > :first-child {
+  margin-top: 0;
+}
+
+#tjiwclykiq .gt_from_md > :last-child {
+  margin-bottom: 0;
+}
+
+#tjiwclykiq .gt_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin: 10px;
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-top-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  overflow-x: hidden;
+}
+
+#tjiwclykiq .gt_stub {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 12px;
+}
+
+#tjiwclykiq .gt_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#tjiwclykiq .gt_first_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+}
+
+#tjiwclykiq .gt_grand_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#tjiwclykiq .gt_first_grand_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: double;
+  border-top-width: 6px;
+  border-top-color: #D3D3D3;
+}
+
+#tjiwclykiq .gt_striped {
+  background-color: rgba(128, 128, 128, 0.05);
+}
+
+#tjiwclykiq .gt_table_body {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#tjiwclykiq .gt_footnotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#tjiwclykiq .gt_footnote {
+  margin: 0px;
+  font-size: 90%;
+  padding: 4px;
+}
+
+#tjiwclykiq .gt_sourcenotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#tjiwclykiq .gt_sourcenote {
+  font-size: 90%;
+  padding: 4px;
+}
+
+#tjiwclykiq .gt_left {
+  text-align: left;
+}
+
+#tjiwclykiq .gt_center {
+  text-align: center;
+}
+
+#tjiwclykiq .gt_right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#tjiwclykiq .gt_font_normal {
+  font-weight: normal;
+}
+
+#tjiwclykiq .gt_font_bold {
+  font-weight: bold;
+}
+
+#tjiwclykiq .gt_font_italic {
+  font-style: italic;
+}
+
+#tjiwclykiq .gt_super {
+  font-size: 65%;
+}
+
+#tjiwclykiq .gt_footnote_marks {
+  font-style: italic;
+  font-weight: normal;
+  font-size: 65%;
+}
+</style>
+<table class="gt_table">
+  
+  <thead class="gt_col_headings">
+    <tr>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">mpg</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" style="border-right-width: 2px; border-right-style: solid; border-right-color: red;">cyl</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">disp</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">hp</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">drat</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">wt</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">qsec</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">vs</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">am</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">gear</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">carb</th>
+    </tr>
+  </thead>
+  <tbody class="gt_table_body">
+    <tr><td class="gt_row gt_right">21.0</td>
+<td class="gt_row gt_right" style="border-right-width: 2px; border-right-style: solid; border-right-color: red;">6</td>
+<td class="gt_row gt_right">160.0</td>
+<td class="gt_row gt_right">110</td>
+<td class="gt_row gt_right">3.90</td>
+<td class="gt_row gt_right">2.620</td>
+<td class="gt_row gt_right">16.46</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">1</td>
+<td class="gt_row gt_right">4</td>
+<td class="gt_row gt_right">4</td></tr>
+    <tr><td class="gt_row gt_right">21.0</td>
+<td class="gt_row gt_right" style="border-right-width: 2px; border-right-style: solid; border-right-color: red;">6</td>
+<td class="gt_row gt_right">160.0</td>
+<td class="gt_row gt_right">110</td>
+<td class="gt_row gt_right">3.90</td>
+<td class="gt_row gt_right">2.875</td>
+<td class="gt_row gt_right">17.02</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">1</td>
+<td class="gt_row gt_right">4</td>
+<td class="gt_row gt_right">4</td></tr>
+    <tr><td class="gt_row gt_right">22.8</td>
+<td class="gt_row gt_right" style="border-right-width: 2px; border-right-style: solid; border-right-color: red;">4</td>
+<td class="gt_row gt_right">108.0</td>
+<td class="gt_row gt_right">93</td>
+<td class="gt_row gt_right">3.85</td>
+<td class="gt_row gt_right">2.320</td>
+<td class="gt_row gt_right">18.61</td>
+<td class="gt_row gt_right">1</td>
+<td class="gt_row gt_right">1</td>
+<td class="gt_row gt_right">4</td>
+<td class="gt_row gt_right">1</td></tr>
+    <tr><td class="gt_row gt_right">21.4</td>
+<td class="gt_row gt_right" style="border-right-width: 2px; border-right-style: solid; border-right-color: red;">6</td>
+<td class="gt_row gt_right">258.0</td>
+<td class="gt_row gt_right">110</td>
+<td class="gt_row gt_right">3.08</td>
+<td class="gt_row gt_right">3.215</td>
+<td class="gt_row gt_right">19.44</td>
+<td class="gt_row gt_right">1</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">3</td>
+<td class="gt_row gt_right">1</td></tr>
+    <tr><td class="gt_row gt_right">18.7</td>
+<td class="gt_row gt_right" style="border-right-width: 2px; border-right-style: solid; border-right-color: red;">8</td>
+<td class="gt_row gt_right">360.0</td>
+<td class="gt_row gt_right">175</td>
+<td class="gt_row gt_right">3.15</td>
+<td class="gt_row gt_right">3.440</td>
+<td class="gt_row gt_right">17.02</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">3</td>
+<td class="gt_row gt_right">2</td></tr>
+    <tr><td class="gt_row gt_right">18.1</td>
+<td class="gt_row gt_right" style="border-right-width: 2px; border-right-style: solid; border-right-color: red;">6</td>
+<td class="gt_row gt_right">225.0</td>
+<td class="gt_row gt_right">105</td>
+<td class="gt_row gt_right">2.76</td>
+<td class="gt_row gt_right">3.460</td>
+<td class="gt_row gt_right">20.22</td>
+<td class="gt_row gt_right">1</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">3</td>
+<td class="gt_row gt_right">1</td></tr>
+    <tr><td class="gt_row gt_right">14.3</td>
+<td class="gt_row gt_right" style="border-right-width: 2px; border-right-style: solid; border-right-color: red;">8</td>
+<td class="gt_row gt_right">360.0</td>
+<td class="gt_row gt_right">245</td>
+<td class="gt_row gt_right">3.21</td>
+<td class="gt_row gt_right">3.570</td>
+<td class="gt_row gt_right">15.84</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">3</td>
+<td class="gt_row gt_right">4</td></tr>
+    <tr><td class="gt_row gt_right">24.4</td>
+<td class="gt_row gt_right" style="border-right-width: 2px; border-right-style: solid; border-right-color: red;">4</td>
+<td class="gt_row gt_right">146.7</td>
+<td class="gt_row gt_right">62</td>
+<td class="gt_row gt_right">3.69</td>
+<td class="gt_row gt_right">3.190</td>
+<td class="gt_row gt_right">20.00</td>
+<td class="gt_row gt_right">1</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">4</td>
+<td class="gt_row gt_right">2</td></tr>
+    <tr><td class="gt_row gt_right">22.8</td>
+<td class="gt_row gt_right" style="border-right-width: 2px; border-right-style: solid; border-right-color: red;">4</td>
+<td class="gt_row gt_right">140.8</td>
+<td class="gt_row gt_right">95</td>
+<td class="gt_row gt_right">3.92</td>
+<td class="gt_row gt_right">3.150</td>
+<td class="gt_row gt_right">22.90</td>
+<td class="gt_row gt_right">1</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">4</td>
+<td class="gt_row gt_right">2</td></tr>
+    <tr><td class="gt_row gt_right">19.2</td>
+<td class="gt_row gt_right" style="border-right-width: 2px; border-right-style: solid; border-right-color: red;">6</td>
+<td class="gt_row gt_right">167.6</td>
+<td class="gt_row gt_right">123</td>
+<td class="gt_row gt_right">3.92</td>
+<td class="gt_row gt_right">3.440</td>
+<td class="gt_row gt_right">18.30</td>
+<td class="gt_row gt_right">1</td>
+<td class="gt_row gt_right">0</td>
+<td class="gt_row gt_right">4</td>
+<td class="gt_row gt_right">4</td></tr>
+  </tbody>
+  
+  
+</table>
+</div>
+
+---
+
+### General Functions 
+
+* [R for Data Science, Programming](https://r4ds.had.co.nz/program-intro.html)  
+* [Software Carpentry - Creating functions](https://swcarpentry.github.io/r-novice-inflammation/02-func-R/)  
+* [Datacarpentry - functions](https://datacarpentry.org/semester-biology/materials/functions-R/)  
+* [UC Business Analytics R Functions guide](https://uc-r.github.io/functions)  
+
+--
+
+### Good practices on naming and style
+
+* [`tidyverse` style guide on functions](https://style.tidyverse.org/functions.html)  
+
+--
+
+### Specific to `tidyeval` but useful overall
+
+* [`tidyeval` book](https://tidyeval.tidyverse.org/index.html)  
+* [`rlang` 0.4 blogpost](https://www.tidyverse.org/blog/2019/06/rlang-0-4-0/#a-simpler-interpolation-pattern-with)  
+* [Programming w/ `dplyr`](https://dplyr.tidyverse.org/articles/programming.html)  
+* [Using `ggplot2` in packages](https://ggplot2.tidyverse.org/articles/ggplot2-in-packages.html)  
+* [Programming w/ `ggplot2`](https://ggplot2-book.org/programming.html)  
+* [Advanced R, metaprogramming](https://adv-r.hadley.nz/metaprogramming.html)  
+
+---
+
+### More realistic internal functions
+
+* Connect to and query an internal database w/ `dbplyr`  
+
+* Take team-specific input data and clean in consistent way  
+
+* Create a specific plot/table with your colors, logo, and specific data  
+
+* Generate an entire report  
+
+--
+
+* ANYTHING you do repeatedly, and want to repeat or test without having to redo manually  
+
+---
+
+### Internal packages
+
+* [Building a team of internal R packages - Emily Riederer](https://emilyriederer.netlify.app/post/team-of-packages/)
+
+&gt; More and more organizations are beginning to write their own internal R packages. These internal tools have great potential to improve an organization’s code quality, promote reproducible analysis frameworks, and enhance knowledge management.  
+&gt;
+&gt; Developers of such tools are often inspired by their favorite open-source tools and, consequently, rely on the design patterns and best practices they have observed.  
+&gt;
+&gt; Although this is a good starting position, internal packages have unique challenges (such as a smaller developer community) and opportunities (such as an intimate understanding of the problem space and over-arching organizational goals).  
+&gt;
+&gt; Internal packages can realize their full potential by engineering to embrace these unique features.
+
+---
+class: center, inverse, middle
+
+# Back to package development
+
+---
+
+### Why a package, and not just `source()`?
+
+`source()` references a specific `.R` file, reads it all in and executes it (which can include adding a function to the environment).
+
+--
+
+`source()`-ing:  
+* Doesn't "know" anything about versioning of the code, ie a package version  
+* Doesn't have included testing  
+* Doesn't have included documentation  
+* Requires the `.R` file to be copied into the project  
+* Can be modified or deleted (accidentally) by the end-user  
+
+---
+
+### Anatomy of a package
+
+* **Metadata** via the `DESCRIPTION`, including the name of the package, description of the package, the version of the package, and any package dependencies  
+
+--
+
+* **Source code** via `.R` files, that live in the `R/` directory.  
+
+--
+
+* Special `roxygen` comments inside the `.R` files that describe how the function operates and its arguments, dependencies, and other metadata  
+
+--
+
+* The **namespace** for the *exported functions* you have written, and the *imported functions* you bring in  
+
+--
+
+* Tests that confirm your function "works as intended"  
+
+--
+
+* Other things (installed files, compiled code, data, tutorials, vignettes)  
+
+---
+
+### Writing packages, but easier
+
+While creating a package can seem intimidating, the `tidyverse` team has spent *years* crafting meta-packages to make life easier to create packages. These are used everyday by 1000s of package developers, and really do make the complicated things easier... with functions!
+
+--
+
+* [`devtools`](https://devtools.r-lib.org/):  
+
+&gt; The aim of devtools is to make package development easier by providing R functions that simplify and expedite common tasks.
+
+--
+
+* [`usethis`](https://usethis.r-lib.org/)  
+
+&gt; usethis is a workflow package: it automates repetitive tasks that arise during project setup and development, both for R packages and non-package projects.
+
+
+---
+
+### A package in 5 min
+
+DEMO
+
+---
+
+### The "Whole game"
+
+
+```r
+# install.packages(c("devtools", "usethis"))
+library(devtools)
+library(usethis)
+```
+
+---
+
+### Create a blank package
+
+Can call `usethis::create_package()` or use the RStudio GUI.
+
+![](images/rstudio-create-pkg.gif)
+
+---
+
+### Version Control
+
+No shame or shade from us, but you _should_ be using version control for your packages, for your production code, and most, if not all, of your important analysis code. We'll focus on packages for now. This allows your team to collaborate on development, and test changes to the code/packages with code review.
+
+--
+
+At RStudio, we typically default to `git` and GitHub, although many folks may use SVN, BitBucket, GitLab, etc. Whatever you're using is great, but note that `usethis` is closely tied to GitHub.
+
+--
+
+We can add a `.git` reference, and optionally add GitHub.
+
+
+```r
+usethis::use_git()
+# optionally use github, but you should make a connection
+# with whatever your version control is
+# usethis::use_github()
+```
+
+--
+
+To read more about Version Control, and specifically how to use `git` with R, please see: [happygitwithr.com](https://happygitwithr.com/) by Jenny Bryan
+
+---
+
+### Start adding our functions
+
+This will create a minimal function `.R` file and open it for interactive editing. We can copy our first basic function over and add it to this file.
+
+
+```r
+usethis::use_r("square_val.R")
+
+## ✓ Setting active project to '/Users/thomasmock/demopkg'
+## • Edit 'R/square_val.R'
+## • Call `use_test()` to create a matching test file
+```
+
+---
+
+### Load the function
+
+We can load the function with `devtools::load_all()`, this will essentially source the function so we can interactively use it or test it.
+
+&gt; `load_all()` has made the function available, although it does not exist in the global workspace.
+
+
+```r
+devtools::load_all()
+```
+
+--
+
+Once we have confirmed the minimal function is working, we should commit our changes! We can do this via the RStudio `GIT` pane or via the terminal.
+
+---
+
+### Check the function
+
+&gt; We have empirical evidence that our function works. But how can we be sure that all the moving parts of the this new package still work? This may seem silly to check, after such a small addition, but it’s good to establish the habit of checking this often.
+
+--
+
+We can do this with the `check()` function.
+
+--
+
+&gt; `check` automatically builds and checks a source package, using all known best practices
+
+
+```r
+devtools::check()
+```
+
+--
+
+The output of this function call is quite verbose as it does a LOT of useful checks. The summary at the end tells you how many errors, warnings, or notes are returned. 
+
+It's important to run this frequently, as you would rather have small moments of friction to fix, rather than doing it much later and having an overwhelming amount of changes to make.
+
+---
+
+### License
+
+Now, the function works fine, but we haven't added a license, which `check()` will throw as a warning. 
+
+--
+
+This may seem silly if you don't intend to publish the package externally to your org, but you should at least define the license so that your wishes are respected as to reuse and ownership of the open source code is clear.
+
+--
+
+[R Packages](https://r-pkgs.org/license.html):  
+
+&gt; Software licensing is a large and complicated field, made particularly complex because it lies at the intersection of programming and law. Fortunately, you don’t need to be an expert to do the right thing: respecting how an author wants their code to be treated as indicated by the license they’ve picked.
+
+I default to `use_mit_license()`, but you can read more about licensing:  
+
+* [Common patterns for licensing R](https://thinkr-open.github.io/licensing-r/rlicense.html)  
+* [R Packages - licensing](https://r-pkgs.org/license.html)  
+* [Choose a License](https://choosealicense.com/)  
+
+---
+
+### `document()` your code
+
+[R Packages](https://r-pkgs.org/man.html):  
+
+&gt; Wouldn’t it be nice to get help on our custom function, just like we do with other R functions? This requires that your package have a special R documentation file, man/function_name.Rd, written in an R-specific markup language that is sort of like LaTeX. Luckily we don’t necessarily have to author that directly.
+
+--
+
+We can open our existing function, and using RStudio:  
+* `Code &gt; insert roxygen skeleton`  
+
+I like to do this via the [RStudio Command Palette](https://blog.rstudio.com/2020/10/14/rstudio-v1-4-preview-command-palette/). 
+
+---
+
+### Let your code breathe on it's own with `roxygen2`
+
+* [`roxygen2`](https://roxygen2.r-lib.org/)  
+
+&gt; The premise of `roxygen2` is simple: describe your functions in comments next to their definitions and `roxygen2` will process your source code and comments to automatically generate `.Rd` files in `man/`, `NAMESPACE`, and, if needed, the Collate field in `DESCRIPTION`.
+
+You can read more about `roxygen2` in the helpful [Introduction to `roxygen2`](https://roxygen2.r-lib.org/articles/roxygen2.html).
+
+--
+
+`roxygen` items are indicated with special comments (`#'`), ie:
+
+```
+#' @param argument A numeric input, that will be squared
+```
+
+---
+
+### Let your code breathe on it's own with `roxygen2`
+
+Now, the amount of things you can document can seem overwhelming, but there's only a few things that are specifically necessary. 
+
+--
+
+* Title of the function w/ **`@title`**  
+* Description of the function purpose with **`@description`**  
+* Documenting the function arguments/parameters with **`@param`**  
+* Specifying it for export with **`@export`**  
+* If it requires external packages, reference the package or specific package functions with **`@import`** and **`@importFrom`**  
+* What does the function return with **`@return`**  
+
+--
+
+While it's not _required_ it's exceptionally helpful to add a minimal example with **`@examples`** 
+
+---
+
+### Basic example
+
+```
+#' @title  Take a numeric value and square it
+#' @description This function takes a numeric value, and squares it. 
+#' It is intended to be used as a replacement for `value^2`
+#' @param x A numeric input, that will be squared
+#'
+#' @return a numeric value
+#' @export
+#' @examples
+#' square_val2(4)
+
+square_val2 &lt;- function(x){
+  
+  stopifnot("Input must be numeric" = is.numeric(x))
+  
+  x^2
+}
+```
+
+---
+
+### Now `document()` it
+
+Now that we have added the `roxygen2` comments, we can call `devtools::document()` to write out the documentation.
+
+--
+
+We can then, just as expected, be able to see the benefit of our labor!
+
+
+```r
+?square_val2
+```
+
+--
+
+While this is great, it's also done some more behind the scenes work. It's added the `square_val2` function as an export in the `NAMESPACE` file.
+
+```
+# Generated by roxygen2: do not edit by hand
+
+export(square_val2)
+```
+
+---
+
+### Check once, check again
+
+Now, we should `devtools::check()` one more time, and make sure we haven't missed anything!
+
+--
+
+Also... new `git` commit! Commit early, commit often!
+
+---
+
+### The joy of package installation
+
+We can now, within the package project, install!
+
+`devtools::install()` when run inside the specific package project, will install the package locally.
+
+--
+
+and just as you would expect, we can now load it like any other package!
+
+
+```r
+library(demopkg)
+
+square_val2(16)
+#&gt; [1] 256
+```
+
+---
+
+### Add more functions
+
+We can add all of our other functions with a similar workflow...
+
+---
+
+### ~~Add more functions~~ Add our tests
+
+We can add all of our other functions with a similar workflow...
+
+but for the sake of time we should talk about testing our functions with [`testthat`](https://usethis.r-lib.org/index.html).
+
+---
+
+### Unit testing with `testthat`
+
+&gt; Whenever you are tempted to type something into a print statement or a debugger expression, write it as a test instead.  
+&gt; — Martin Fowler  
+
+--
+
+Up until now, we've only tested our function interactively and checked for package errors via `check()`. 
+
+--
+
+&gt; We can formalize and expand this with some unit tests via `testthat`. This means we express a few concrete expectations about the correct `square_val2()` result for various inputs.  
+&gt; - [R Packages, testing](https://r-pkgs.org/tests.html)
+
+--
+
+[Unit tests are:](https://en.wikipedia.org/wiki/Unit_testing)  
+
+&gt; typically automated tests written and run by software developers to ensure that a section of an application (known as the "unit") meets its design and behaves as intended...By writing tests first for the smallest testable units, then the compound behaviors between those, one can build up comprehensive tests for complex ~~applications~~ [packages]
+
+---
+
+### Use `testthat`
+
+&gt; `usethis` is a workflow package: it automates repetitive tasks that arise during project setup and development, both for R packages and non-package projects.
+
+One of the features it provides is the ability to quickly create a `testthat` folder for your package.
+
+
+```r
+library(usethis)
+usethis::use_testthat()
+```
+
+---
+
+### Test structures
+
+Tests are organised hierarchically: **expectations** are grouped into **tests** which are organised in files:  
+
+--
+
+* An **expectation** is the atom of testing. It describes the expected result of a computation: Does it have the right value and right class? Does it produce error messages when it should? An expectation automates visual checking of results in the console. Expectations are functions that start with `expect_`.  
+
+--
+
+* A **test** groups together multiple expectations to test the output from a simple function, a range of possibilities for a single parameter from a more complicated function, or tightly related functionality from across multiple functions. This is why they are sometimes called unit as they test one **unit** of functionality. A test is created with `test_that()`.  
+
+--
+
+* A **file** groups together multiple related tests. Files are given a human readable name with `context()`.
+
+---
+
+### `testthat` example
+
+Interactively, you can write and check tests.
+
+--
+
+
+```r
+library(demopkg)
+library(testthat)
+```
+
+
+```r
+test_that("Squared values match expectations", {
+  expect_equal(square_val2(2), 2^2)
+  expect_equal(square_val2(4), 4^2)
+  expect_equal(square_val2(16), 16^2)
+})
+```
+
+```
+## Test passed 🎉
+```
+
+
+```r
+test_that("Non-numeric or missing inputs should error", {
+  expect_error(square_val2("a"), "Input must be numeric")
+  expect_error(square_val2(factor("a")), "Input must be numeric")
+  expect_error(square_val2(mtcars), "Input must be numeric")
+  expect_error(square_val2(NA), "Input must be numeric")
+})
+```
+
+```
+## Test passed 🥇
+```
+
+---
+
+### `testthat` Test structure
+
+&gt; A test file lives in `tests/testthat/`. Its name must start with `test`. Here’s an example of a usable test file:
+
+--
+
+
+```r
+context("Confirm values are valid &amp; non-numeric inputs error")
+library(demopkg)
+
+test_that("Squared values match expectations", {
+  expect_equal(square_val2(2), 2^2)
+  expect_equal(square_val2(4), 4^2)
+  expect_equal(square_val2(16), 16^2)
+})
+#&gt; Test passed 🥇
+
+test_that("Non-numeric or missing inputs should error", {
+  expect_error(square_val2("a"))
+  expect_error(square_val2(factor("a")))
+  expect_error(square_val2(mtcars))
+  expect_error(square_val2(NA))
+  expect_error(square_val2(NULL))
+})
+#&gt; Test passed 🥳
+```
+
+
+---
+
+### What happens if they don't match?
+
+--
+
+
+```r
+square_val2("string")
+```
+
+```
+## Error in square_val2("string"): Input must be numeric
+```
+
+```r
+expect_error(square_val2("string"), "The input must be numeric")
+```
+
+```
+## Error: `square_val2("string")` threw an error with unexpected message.
+## Expected match: "The input must be numeric"
+## Actual message: "Input must be numeric"
+```
+
+--
+
+
+```r
+square_val2(2)
+```
+
+```
+## [1] 4
+```
+
+```r
+expect_equal(square_val2(2), 2^3)
+```
+
+```
+## Error: square_val2(2) not equal to 2^3.
+## 1/1 mismatches
+## [1] 4 - 8 == -4
+```
+
+---
+
+### More on `testing`
+
+While we've covered the basics of unit testing via `testthat`, you'll likely want to read more about it.
+
+* [R Packages, Testing chapter](https://r-pkgs.org/tests.html)  
+* [`testhat` documentation](https://testthat.r-lib.org/)  
+* [A long form example of robust testing](https://themockup.blog/posts/2021-03-07-creating-a-custom-gt-function-for-aligning-first-row-text-and-testing-it-with-testthat/)
+
+--
+
+Let's move on to more documentation!
+
+---
+
+### Build static `pkgdown` site
+
+You can build your very own `pkgdown` site, just like the one for [`devtools`](https://devtools.r-lib.org/reference/build_site.html) by referencing the existing documentation.
+
+--
+
+This is super easy, just use `devtools::build_site()`
+
+&gt; `devtools::build_site()` is a shortcut for `pkgdown::build_site()`, it generates the static HTML documentation.
+
+
+```r
+devtools::build_site()
+```
+
+--
+
+This is a nice addendum beyond the built-in documentation within R, and most notably allows you to explore the documentation or share the documentation outside of needing R. As such, you can share information about the package within a team prior to even installing the package.
+
+--
+
+The static HTML generated by `pkgdown` can be hosted internally behind authentication via a proper data science tool like RStudio Connect, or publicly on GitHub pages or Netlify. 
+
+---
+
+### Reference external packages
+
+Now so far, we've not used any additional packages external to base R. To add additional packages, we need to reference them in the `.R` file and in the `DESCRIPTION`.
+
+Let's revisit our `gt` example, and show the specific components for change.
+
+---
+
+### A `gt` function
+
+
+```r
+gt_add_divider &lt;- function(gt_object, columns, ..., 
+                           include_labels = TRUE) {
+  stopifnot("Table must be of class 'gt_tbl'" = 
+              "gt_tbl" %in% class(gt_object))
+
+  gt_object %&gt;%
+    tab_style(
+      # dots include passed named arguments to the internal function
+      style = cell_borders(sides = "right", ...),
+      locations = if (isTRUE(include_labels)) {
+        # columns to affect
+        list(cells_body(columns = {{ columns }}),
+          cells_column_labels(columns = {{ columns }}))
+      } else {
+        cells_body(columns = {{ columns }})
+      }
+    )
+}
+```
+
+---
+
+### A `gt` function, documented
+
+We need to specify that we are importing `gt`, so that it's arguments can be referenced in our custom function. We should git commit these changes, and then run `devtools::document()` to rebuild and reference these docs.
+
+That will add `gt` as an import in the namespace file, and add `gt_add_divider()` as an export.
+
+
+```r
+#' @title Add a column divider to a gt table
+#' @description Inserts a border to the right of a specific column
+#' @param gt_object an existing gt_tbl
+#' @param columns The specific columns where a border will be added
+#' @param ... Additional arguments passed to `gt::cell_borders()`
+#' @param include_labels a logical indicating if the border includes column labels
+#' @importFrom gt %&gt;%
+#' @import gt
+#' @export
+
+gt_add_divider &lt;- function(gt_object, columns, ..., 
+                           include_labels = TRUE) {code}
+```
+
+---
+
+### A `gt` function, documented
+
+We also need to add `gt` as an import in the `DESCRIPTION` (and git commit)
+
+```
+Package: demopkg
+Type: Package
+Title: Our cool new helper function package
+Version: 0.1.0
+Author: Thomas Mock
+Maintainer: Josiah Parry &lt;jparry@rstudio.com&gt;
+Description: An amazing package that has lots of cool new features.
+    It also includes a cool new gt function.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.1.1
+Roxygen: list(markdown = TRUE)
+Imports: 
+    gt (&gt;= 0.3)
+```
+
+---
+
+### Wrap-up
+
+We've gone through:  
+
+* The end-to-end process of writing and creating functions with base R and with `tidyeval`  
+* How to create a minimal package  
+* How to document the package within R  
+* How to test the functions within your package  
+* How to create public documentation, external to R  
+
+--
+
+I hope you feel empowered that _you_ can create your own package, and with many best practices. Ultimately, once you get started you'll quickly see that the tooling has been written to make the process very user friendly.
+
+---
+
+.pull-left[
+### For followup
+
+]
+
+.pull-right[
+
+&lt;img src="https://d33wubrfki0l68.cloudfront.net/19c4a5cab01d9bcb1d2edeb63ce5ba0f21870e33/68feb/images/cover.png" width="50%" /&gt;
+
+]
+
+
+You can follow the full process in the [R Packages book](https://r-pkgs.org/whole-game.html). It has specific chapters corresponding to the major requirements for building a package.
+
+&gt; Welcome to R packages by Hadley Wickham and Jenny Bryan. Packages are the fundamental units of reproducible R code. They include reusable R functions, the documentation that describes how to use them, and sample data. In this book you’ll learn how to turn your code into packages that others can easily download and use. Writing a package can seem overwhelming at first. So start with the basics and improve it over time. 
+
+
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"ratio": "16:9",
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
