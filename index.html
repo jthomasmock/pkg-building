@@ -63,7 +63,7 @@ Packages are a way of describing and distributing these functions, in a structur
 
 ---
 
-## So you want to build a ~~package~~ home for functions
+### So you want to build a ~~package~~ home for functions
 
 &gt; Reproducibility is actually all about being as lazy as possible!  
 &gt; – Hadley Wickham
@@ -84,7 +84,7 @@ Ultimately, functions make your work much easier, faster, and more reproducible
 
 --
 
-...and let you be lazier, in a good way!
+...and R packages let you share these functions and be lazier, in a good way!
 
 ---
 class: inverse, center, middle
@@ -95,10 +95,21 @@ class: inverse, center, middle
 
 ### Anatomy of a Function
 
-1. A descriptive function **name**, informing the user of the function's purpose
-2. The argument(s) to the **function**, controlling the output of the function
-3. The **body** of the function, that represents all the code to be used internally
-4. What the function **returns** 
+1. A descriptive function **name**, informing the user of the function's purpose  
+
+--
+
+2. The argument(s) to the **function**, controlling the output of the function  
+
+--
+
+3. The **body** of the function, that represents all the code to be used internally  
+
+--
+
+4. What the function **returns**  
+
+--
 
 
 ```r
@@ -118,6 +129,8 @@ A simple function, with:
 * one **argument** `x`  
 * that takes `x` and squares it  
 * and then **returns** it  
+
+--
 
 
 ```r
@@ -250,16 +263,16 @@ generate_df(125)
 ## # A tibble: 125 × 2
 ##    id    values
 ##    &lt;chr&gt;  &lt;dbl&gt;
-##  1 H019    18.5
-##  2 V094    12.2
-##  3 T057    15.3
-##  4 S087    16.5
-##  5 N105    14.7
-##  6 I124    10.7
-##  7 N094    19.4
-##  8 V076    16.1
-##  9 M004    13.6
-## 10 X111    12.3
+##  1 I123    13.8
+##  2 Q110    12.6
+##  3 W045    15.0
+##  4 B108    17.4
+##  5 I090    16.6
+##  6 L019    15.3
+##  7 W015    13.6
+##  8 L108    14.3
+##  9 W010    15.8
+## 10 Y037    14.7
 ## # … with 115 more rows
 ```
 
@@ -635,8 +648,7 @@ my_car_summary_dots2(cyl, hp_mean = mean(hp), hp_sd = sd(hp))
 .pull-left[
 
 ```r
-var_summary &lt;- function(
-  data, var) {
+var_summary &lt;- function(data, var) {
   data %&gt;%
     summarise(
       n = n(), 
@@ -644,7 +656,10 @@ var_summary &lt;- function(
       max = max({{ var }}),
       .groups = "drop")
 }
+```
 
+
+```r
 mtcars %&gt;% 
   group_by(cyl) %&gt;% 
   var_summary(mpg)
@@ -730,10 +745,8 @@ mtcars %&gt;%
 ```r
 library(gt)
 
-gt_add_divider &lt;- function(gt_object, columns, ..., 
-                           include_labels = TRUE) {
-  stopifnot("Table must be of class 'gt_tbl'" = 
-              "gt_tbl" %in% class(gt_object))
+gt_add_divider &lt;- function(gt_object, columns, ..., include_labels = TRUE) {
+  stopifnot("Table must be of class 'gt_tbl'" = "gt_tbl" %in% class(gt_object))
 
   gt_object %&gt;%
     tab_style(
@@ -1250,7 +1263,7 @@ head(mtcars, 10) %&gt;%
 
 --
 
-#### Specific to `tidyeval` but useful overall
+#### Some `tidyeval` and advanced functions
 
 * [`tidyeval` book](https://tidyeval.tidyverse.org/index.html)  
 * [`rlang` 0.4 blogpost](https://www.tidyverse.org/blog/2019/06/rlang-0-4-0/#a-simpler-interpolation-pattern-with)  
@@ -1356,21 +1369,9 @@ While creating a package can seem intimidating, the `tidyverse` team has spent *
 
 
 ---
+class: center, middle, inverse
 
-### A package in 5 min
-
-DEMO
-
----
-
-### The "Whole game"
-
-
-```r
-# install.packages(c("devtools", "usethis"))
-library(devtools)
-library(usethis)
-```
+# A `demo` package in 5 min
 
 ---
 
@@ -1379,6 +1380,26 @@ library(usethis)
 Can call `usethis::create_package()` or use the RStudio GUI.
 
 ![](images/rstudio-create-pkg.gif)
+
+---
+
+class: center, middle, inverse
+
+# The "Whole game"
+
+---
+
+### The "Whole game"
+
+Load your helper packages and let's go through the process together.
+
+
+```r
+# install.packages(c("devtools", "usethis"))
+library(devtools)
+library(usethis)
+```
+
 
 ---
 
@@ -1987,6 +2008,33 @@ REMEMBER! **Smaller** changes committed *frequently* via git.
 
 * If all is well, `devtools::install()` to install it locally  
 
+
+---
+
+### Installation, revisited
+
+Now, as far as `devtools::install()`, that takes care of you being able to install it for yourself.
+
+--
+
+To share with your colleagues, they can `remotes::install_???` it from your version control, for example I use:  
+
+&gt; `remotes::install_github("jthomasmock/gtExtras)`
+
+--
+
+But you could just as easily use `install_gitlab()` or `install_git()`.
+
+--
+
+However, that will only install the most recently released dev version. I could also host the package on an internal CRAN-like repository, or even better, on RStudio Package Manager. 
+
+--
+
+The basic benefit of Package Manager are:  
+* Allowing for multiple versions of the package to be available  
+* For all of the packages/dependencies to also be behind your firewall  
+* For it to install all of the external package dependencies as binary packages (MASSIVELY faster install in Linux)  
 
 ---
 
