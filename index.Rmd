@@ -33,8 +33,8 @@ meta() %>%
     title = "Package Building with devtools and usethis",
     description = paste(
       "Package building doesn't have to be scary!",
-      "The tidyverse team have made it easy to get started",
-      "with RStudio, {devtools}, and {usethis}."
+      "The tidyverse team made it easy to get started",
+      "with RStudio, {devtools}, & {usethis}."
     ),
     url = "https://jthomasmock.github.io/pkg-building",
     image = "https://raw.githubusercontent.com/jthomasmock/pkg-building/master/images/title-card.png",
