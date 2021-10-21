@@ -36,7 +36,7 @@ meta() %>%
       "The tidyverse team made it easy to get started",
       "with RStudio, {devtools}, & {usethis}."
     ),
-    url = "https://jthomasmock.github.io/pkg-building",
+    url = "https://colorado.rstudio.com/rsc/pkg-building/",
     image = "https://raw.githubusercontent.com/jthomasmock/pkg-building/master/images/title-card.png",
     image_alt = paste(
       "Title slide of Package Building with devtools and usethis.", 
@@ -317,9 +317,44 @@ generate_df2(125, with_seed = 37, mean = 10, sd = 2)
 
 ---
 
+### Actual use in `gtExtras`
+
+```{r}
+generate_df <- function(n = 10L, n_grps = 1L, mean = c(10), sd = mean/10,
+                        with_seed = NULL){
+  # If a seed is specified, then use it, otherwise ignore
+  if(!base::is.null(with_seed)){base::set.seed(with_seed)}
+
+  # pad the values with repeated zeros
+  pad_length <- base::paste0("%0", nchar(n), "d")
+  random_int <- base::sample(1:n, replace = TRUE)
+  padded_int <- base::sprintf(pad_length, random_int)
+  
+  # create a df with combined random letters and integers
+  dplyr::tibble(
+    row_id = 1:(n*n_grps),
+    id = paste0(sample(LETTERS, n*n_grps, replace = TRUE), padded_int),
+    grp = sprintf("grp-%s", 1:n_grps) %>% rep(each = n),
+    values = mapply(rnorm, n, mean, sd) %>% as.vector()
+  )
+}
+```
+
+---
+
+### Actual use in `gtExtras`
+
+```{r}
+generate_df()
+```
+
+
+
+---
+
 ### Don't repeat yourself
 
-(Sure, you could use `regex`, but let's not for now)
+(Sure, you could use `regex` or even `stringr`, but let's not for now)
 
 ```{r}
 my_string <- "RStudio 147"
@@ -623,7 +658,7 @@ basic_table %>%
 ```{r}
 basic_table %>% 
   ### include_labels as an existing argument
-  gt_add_divider(cyl, weight = px(3), color = "lightgrey", include_labels = FALSE)
+  gt_add_divider(c(cyl,mpg), weight = px(3), color = "lightgrey", include_labels = FALSE)
 ```
 
 ---
@@ -663,6 +698,10 @@ basic_table %>%
 * Create a specific plot/table with your colors, logo, and specific data  
 
 * Generate an entire report  
+
+* Reusable shiny functions  
+
+* Scaffolding/wrapper for machine learning tasks  
 
 --
 
@@ -1080,7 +1119,7 @@ Tests are organised hierarchically: **expectations** are grouped into **tests** 
 
 --
 
-* A **file** groups together multiple related tests. Files are given a human readable name with `context()`.
+* A **file** groups together multiple related tests.
 
 ---
 
@@ -1091,7 +1130,7 @@ Interactively, you can write and check tests.
 --
 
 ```{r, eval = FALSE}
-library(demopkg)
+devtools::load_all()
 library(testthat)
 ```
 
@@ -1121,9 +1160,6 @@ test_that("Non-numeric or missing inputs should error", {
 --
 
 ```{r, eval = FALSE}
-context("Confirm values are valid & non-numeric inputs error")
-library(demopkg)
-
 test_that("Squared values match expectations", {
   expect_equal(square_val2(2), 2^2)
   expect_equal(square_val2(4), 4^2)

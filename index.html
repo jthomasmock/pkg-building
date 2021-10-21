@@ -4,13 +4,13 @@
     <title>Package Building</title>
     <meta charset="utf-8" />
     <meta name="author" content="Tom Mock &amp; Josiah Parry" />
-    <meta name="date" content="2021-09-27" />
+    <meta name="date" content="2021-10-21" />
     <script src="libs/header-attrs/header-attrs.js"></script>
     <link href="libs/remark-css/default.css" rel="stylesheet" />
     <meta name="github-repo" content="jthomasmock/pkg-building"/>
     <meta name="twitter:title" content="Package Building with devtools and usethis"/>
     <meta name="twitter:description" content="Package building doesn&#39;t have to be scary! The tidyverse team made it easy to get started with RStudio, {devtools}, &amp; {usethis}."/>
-    <meta name="twitter:url" content="https://jthomasmock.github.io/pkg-building"/>
+    <meta name="twitter:url" content="https://colorado.rstudio.com/rsc/pkg-building/"/>
     <meta name="twitter:image:src" content="https://raw.githubusercontent.com/jthomasmock/pkg-building/master/images/title-card.png"/>
     <meta name="twitter:image:alt" content="Title slide of Package Building with devtools and usethis. A slide deck covering the basics of writing functions and developing packages. It also has an image of a orange rubik cube with a blue heart in the middle."/>
     <meta name="twitter:card" content="summary_large_image"/>
@@ -18,7 +18,7 @@
     <meta name="twitter:site" content="@thomas_mock"/>
     <meta property="og:title" content="Package Building with devtools and usethis"/>
     <meta property="og:description" content="Package building doesn&#39;t have to be scary! The tidyverse team made it easy to get started with RStudio, {devtools}, &amp; {usethis}."/>
-    <meta property="og:url" content="https://jthomasmock.github.io/pkg-building"/>
+    <meta property="og:url" content="https://colorado.rstudio.com/rsc/pkg-building/"/>
     <meta property="og:image" content="https://raw.githubusercontent.com/jthomasmock/pkg-building/master/images/title-card.png"/>
     <meta property="og:image:alt" content="Title slide of Package Building with devtools and usethis. A slide deck covering the basics of writing functions and developing packages. It also has an image of a orange rubik cube with a blue heart in the middle."/>
     <meta property="og:type" content="website"/>
@@ -43,7 +43,7 @@ class: title-slide, left, top
 
 ### Tom Mock &amp; Josiah Parry
 
-### 2021-09-27
+### 2021-10-21
 
 &lt;br&gt;
 
@@ -289,16 +289,16 @@ generate_df(125)
 ## # A tibble: 125 × 2
 ##    id    values
 ##    &lt;chr&gt;  &lt;dbl&gt;
-##  1 N054    14.9
-##  2 G022    13.5
-##  3 H083    14.5
-##  4 N060    12.2
-##  5 O024    13.3
-##  6 Y010    13.5
-##  7 V079    14.3
-##  8 N099    13.0
-##  9 Z060    13.3
-## 10 Y025    16.0
+##  1 W085    16.3
+##  2 W038    14.5
+##  3 F022    13.0
+##  4 I021    14.5
+##  5 F065    12.5
+##  6 D037    11.2
+##  7 M086    15.5
+##  8 C043    12.4
+##  9 D042    15.9
+## 10 C067    12.4
 ## # … with 115 more rows
 ```
 
@@ -389,9 +389,62 @@ generate_df2(125, with_seed = 37, mean = 10, sd = 2)
 
 ---
 
+### Actual use in `gtExtras`
+
+
+```r
+generate_df &lt;- function(n = 10L, n_grps = 1L, mean = c(10), sd = mean/10,
+                        with_seed = NULL){
+  # If a seed is specified, then use it, otherwise ignore
+  if(!base::is.null(with_seed)){base::set.seed(with_seed)}
+
+  # pad the values with repeated zeros
+  pad_length &lt;- base::paste0("%0", nchar(n), "d")
+  random_int &lt;- base::sample(1:n, replace = TRUE)
+  padded_int &lt;- base::sprintf(pad_length, random_int)
+  
+  # create a df with combined random letters and integers
+  dplyr::tibble(
+    row_id = 1:(n*n_grps),
+    id = paste0(sample(LETTERS, n*n_grps, replace = TRUE), padded_int),
+    grp = sprintf("grp-%s", 1:n_grps) %&gt;% rep(each = n),
+    values = mapply(rnorm, n, mean, sd) %&gt;% as.vector()
+  )
+}
+```
+
+---
+
+### Actual use in `gtExtras`
+
+
+```r
+generate_df()
+```
+
+```
+## # A tibble: 10 × 4
+##    row_id id    grp   values
+##     &lt;int&gt; &lt;chr&gt; &lt;chr&gt;  &lt;dbl&gt;
+##  1      1 E05   grp-1  10.5 
+##  2      2 A09   grp-1   9.73
+##  3      3 C07   grp-1  10.5 
+##  4      4 L01   grp-1  10.9 
+##  5      5 A08   grp-1   8.80
+##  6      6 C01   grp-1  10.1 
+##  7      7 Z07   grp-1   9.48
+##  8      8 E08   grp-1  10.0 
+##  9      9 T01   grp-1   9.77
+## 10     10 L07   grp-1  10.9
+```
+
+
+
+---
+
 ### Don't repeat yourself
 
-(Sure, you could use `regex`, but let's not for now)
+(Sure, you could use `regex` or even `stringr`, but let's not for now)
 
 
 ```r
@@ -2118,7 +2171,7 @@ basic_table %&gt;%
 ```r
 basic_table %&gt;% 
   ### include_labels as an existing argument
-  gt_add_divider(cyl, weight = px(3), color = "lightgrey", include_labels = FALSE)
+  gt_add_divider(c(cyl,mpg), weight = px(3), color = "lightgrey", include_labels = FALSE)
 ```
 
 <div id="gklsbnjpsx" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
@@ -2477,7 +2530,7 @@ basic_table %&gt;%
     </tr>
   </thead>
   <tbody class="gt_table_body">
-    <tr><td class="gt_row gt_right">21.0</td>
+    <tr><td class="gt_row gt_right" style="border-right-width: 3px; border-right-style: solid; border-right-color: lightgrey;">21.0</td>
 <td class="gt_row gt_right" style="border-right-width: 3px; border-right-style: solid; border-right-color: lightgrey;">6</td>
 <td class="gt_row gt_right">160</td>
 <td class="gt_row gt_right">110</td>
@@ -2488,7 +2541,7 @@ basic_table %&gt;%
 <td class="gt_row gt_right">1</td>
 <td class="gt_row gt_right">4</td>
 <td class="gt_row gt_right">4</td></tr>
-    <tr><td class="gt_row gt_right">21.0</td>
+    <tr><td class="gt_row gt_right" style="border-right-width: 3px; border-right-style: solid; border-right-color: lightgrey;">21.0</td>
 <td class="gt_row gt_right" style="border-right-width: 3px; border-right-style: solid; border-right-color: lightgrey;">6</td>
 <td class="gt_row gt_right">160</td>
 <td class="gt_row gt_right">110</td>
@@ -2499,7 +2552,7 @@ basic_table %&gt;%
 <td class="gt_row gt_right">1</td>
 <td class="gt_row gt_right">4</td>
 <td class="gt_row gt_right">4</td></tr>
-    <tr><td class="gt_row gt_right">22.8</td>
+    <tr><td class="gt_row gt_right" style="border-right-width: 3px; border-right-style: solid; border-right-color: lightgrey;">22.8</td>
 <td class="gt_row gt_right" style="border-right-width: 3px; border-right-style: solid; border-right-color: lightgrey;">4</td>
 <td class="gt_row gt_right">108</td>
 <td class="gt_row gt_right">93</td>
@@ -2510,7 +2563,7 @@ basic_table %&gt;%
 <td class="gt_row gt_right">1</td>
 <td class="gt_row gt_right">4</td>
 <td class="gt_row gt_right">1</td></tr>
-    <tr><td class="gt_row gt_right">21.4</td>
+    <tr><td class="gt_row gt_right" style="border-right-width: 3px; border-right-style: solid; border-right-color: lightgrey;">21.4</td>
 <td class="gt_row gt_right" style="border-right-width: 3px; border-right-style: solid; border-right-color: lightgrey;">6</td>
 <td class="gt_row gt_right">258</td>
 <td class="gt_row gt_right">110</td>
@@ -2521,7 +2574,7 @@ basic_table %&gt;%
 <td class="gt_row gt_right">0</td>
 <td class="gt_row gt_right">3</td>
 <td class="gt_row gt_right">1</td></tr>
-    <tr><td class="gt_row gt_right">18.7</td>
+    <tr><td class="gt_row gt_right" style="border-right-width: 3px; border-right-style: solid; border-right-color: lightgrey;">18.7</td>
 <td class="gt_row gt_right" style="border-right-width: 3px; border-right-style: solid; border-right-color: lightgrey;">8</td>
 <td class="gt_row gt_right">360</td>
 <td class="gt_row gt_right">175</td>
@@ -2532,7 +2585,7 @@ basic_table %&gt;%
 <td class="gt_row gt_right">0</td>
 <td class="gt_row gt_right">3</td>
 <td class="gt_row gt_right">2</td></tr>
-    <tr><td class="gt_row gt_right">18.1</td>
+    <tr><td class="gt_row gt_right" style="border-right-width: 3px; border-right-style: solid; border-right-color: lightgrey;">18.1</td>
 <td class="gt_row gt_right" style="border-right-width: 3px; border-right-style: solid; border-right-color: lightgrey;">6</td>
 <td class="gt_row gt_right">225</td>
 <td class="gt_row gt_right">105</td>
@@ -2586,6 +2639,10 @@ basic_table %&gt;%
 * Create a specific plot/table with your colors, logo, and specific data  
 
 * Generate an entire report  
+
+* Reusable shiny functions  
+
+* Scaffolding/wrapper for machine learning tasks  
 
 --
 
@@ -3011,7 +3068,7 @@ Tests are organised hierarchically: **expectations** are grouped into **tests** 
 
 --
 
-* A **file** groups together multiple related tests. Files are given a human readable name with `context()`.
+* A **file** groups together multiple related tests.
 
 ---
 
@@ -3023,7 +3080,7 @@ Interactively, you can write and check tests.
 
 
 ```r
-library(demopkg)
+devtools::load_all()
 library(testthat)
 ```
 
@@ -3064,9 +3121,6 @@ test_that("Non-numeric or missing inputs should error", {
 
 
 ```r
-context("Confirm values are valid &amp; non-numeric inputs error")
-library(demopkg)
-
 test_that("Squared values match expectations", {
   expect_equal(square_val2(2), 2^2)
   expect_equal(square_val2(4), 4^2)
