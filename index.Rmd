@@ -93,15 +93,15 @@ And **functions** are a home for *source code*.
 
 --
 
-Stating this a bit differently:
+### Stating this a bit differently:
 
 --
 
-Functions in R are short-hand for longer source code. 
+Functions in R are _just_ wrappers around longer source code. 
 
 --
 
-Packages are a way of describing and distributing these functions, in a structured and consistent way.
+Packages are _just_ a way of **describing** and **distributing** these functions, in a **structured and consistent way**.
 
 ---
 
