@@ -967,7 +967,7 @@ Now, the amount of things you can document can seem overwhelming, but there's on
 
 --
 
-* Title of the function w/ **`@title`**  
+* Title of the function with **`@title`**  
 * Description of the function purpose with **`@description`**  
 * Documenting the function arguments/parameters with **`@param`**  
 * Specifying it for export with **`@export`**  
